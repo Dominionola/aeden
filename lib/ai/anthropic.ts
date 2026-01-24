@@ -1,9 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY!,
-});
-
 export interface ClaudeGenerateOptions {
     input: string;
     tone: string;
@@ -21,7 +17,16 @@ export interface ClaudeGenerateOptions {
     maxTokens?: number;
 }
 
+function getClient() {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+        throw new Error("ANTHROPIC_API_KEY environment variable is required");
+    }
+    return new Anthropic({ apiKey });
+}
+
 export async function generateWithClaude(options: ClaudeGenerateOptions): Promise<string> {
+    const anthropic = getClient();
     const { input, tone, voiceAnalysis, creatorBookmarks, brandGuidelines, maxTokens = 1000 } = options;
 
     const charLimit = 500;
@@ -74,22 +79,30 @@ CRITICAL:
 
 Output ONLY the post text, nothing else.`;
 
-    const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }],
-    });
+    try {
+        const message = await anthropic.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: maxTokens,
+            messages: [{ role: "user", content: prompt }],
+        });
 
-    const postText = message.content[0].type === "text" ? message.content[0].text.trim() : "";
+        const postText = message.content[0].type === "text" ? message.content[0].text.trim() : "";
 
-    if (postText.length > charLimit) {
-        return postText.substring(0, charLimit - 3) + "...";
+        if (postText.length > charLimit) {
+            return postText.substring(0, charLimit - 3) + "...";
+        }
+
+        return postText;
+    } catch (error) {
+        if (error instanceof Anthropic.APIError) {
+            throw new Error(`Claude API error: ${error.message}`);
+        }
+        throw error;
     }
-
-    return postText;
 }
 
 export async function analyzeVoiceWithClaude(pastPosts: string[]): Promise<object> {
+    const anthropic = getClient();
     const prompt = `Analyze these social media posts and identify the writer's voice characteristics:
 
 ${pastPosts.map((p, i) => `Post ${i + 1}: "${p}"`).join("\n\n")}
@@ -114,13 +127,20 @@ Extract and return ONLY a JSON object with these keys:
 
 Output ONLY valid JSON, nothing else.`;
 
-    const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
-        messages: [{ role: "user", content: prompt }],
-    });
+    try {
+        const message = await anthropic.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 2000,
+            messages: [{ role: "user", content: prompt }],
+        });
 
-    const analysisText = message.content[0].type === "text" ? message.content[0].text.trim() : "{}";
+        const analysisText = message.content[0].type === "text" ? message.content[0].text.trim() : "{}";
 
-    return JSON.parse(analysisText);
+        return JSON.parse(analysisText);
+    } catch (error) {
+        if (error instanceof Anthropic.APIError) {
+            throw new Error(`Claude API error: ${error.message}`);
+        }
+        throw error;
+    }
 }

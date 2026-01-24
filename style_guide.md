@@ -1,4 +1,4 @@
-# VOCA - Style Guide
+# AEDEN - Style Guide
 
 > Design System for the Multi-Persona Build-in-Public Tool
 
@@ -217,7 +217,7 @@ npx shadcn@latest add toast sonner skeleton switch label
 
 ### Required shadcn/ui Components
 
-| Component | Usage in VOCA |
+| Component | Usage in AEDEN |
 |-----------|---------------|
 | `Button` | Primary actions, form submits |
 | `Card` | Post cards, metric cards, settings sections |

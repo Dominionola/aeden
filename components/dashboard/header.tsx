@@ -76,10 +76,15 @@ export function Header() {
                             <Link href="/settings/voice">Voice & Persona</Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                                // Call your sign out logic here
+                                // e.g., signOut() from next-auth or your auth provider
+                            }}
+                        >
                             Sign out
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
+                        </DropdownMenuItem>                    </DropdownMenuContent>
                 </DropdownMenu>
             </div>
         </header>

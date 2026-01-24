@@ -1,7 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
-
 export interface GeminiGenerateOptions {
     input: string;
     tone: string;
@@ -19,7 +17,16 @@ export interface GeminiGenerateOptions {
     maxTokens?: number;
 }
 
+function getClient() {
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
+        throw new Error("GOOGLE_GENERATIVE_AI_API_KEY environment variable is required");
+    }
+    return new GoogleGenerativeAI(apiKey);
+}
+
 export async function generateWithGemini(options: GeminiGenerateOptions): Promise<string> {
+    const genAI = getClient();
     const { input, tone, voiceAnalysis, creatorBookmarks, brandGuidelines, maxTokens = 1000 } = options;
 
     const charLimit = 500;
@@ -74,25 +81,34 @@ Output ONLY the post text, nothing else.`;
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-            maxOutputTokens: maxTokens,
-            temperature: 0.8,
-        },
-    });
+    try {
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                maxOutputTokens: maxTokens,
+                temperature: 0.8,
+            },
+        });
 
-    const response = result.response;
-    const postText = response.text().trim();
+        const response = result.response;
+        const postText = response.text().trim();
 
-    if (postText.length > charLimit) {
-        return postText.substring(0, charLimit - 3) + "...";
+        if (postText.length > charLimit) {
+            return postText.substring(0, charLimit - 3) + "...";
+        }
+
+        return postText;
+    } catch (error) {
+        throw new Error(`Failed to generate content with Gemini: ${error instanceof Error ? error.message : String(error)}`);
     }
-
-    return postText;
 }
 
 export async function analyzeVoiceWithGemini(pastPosts: string[]): Promise<object> {
+    const genAI = getClient();
+    if (pastPosts.length === 0) {
+        throw new Error("At least one post is required for voice analysis");
+    }
+
     const prompt = `Analyze these social media posts and identify the writer's voice characteristics:
 
 ${pastPosts.map((p, i) => `Post ${i + 1}: "${p}"`).join("\n\n")}
@@ -119,16 +135,20 @@ Output ONLY valid JSON, nothing else.`;
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-    const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-            maxOutputTokens: 2000,
-            temperature: 0.3,
-        },
-    });
+    try {
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                maxOutputTokens: 2000,
+                temperature: 0.3,
+            },
+        });
 
-    const response = result.response;
-    const analysisText = response.text().trim();
+        const response = result.response;
+        const analysisText = response.text().trim();
 
-    return JSON.parse(analysisText);
+        return JSON.parse(analysisText);
+    } catch (error) {
+        throw new Error(`Failed to analyze voice with Gemini: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }

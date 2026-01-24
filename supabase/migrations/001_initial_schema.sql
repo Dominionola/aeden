@@ -137,8 +137,8 @@ CREATE POLICY "Users can insert own work sources"
 
 CREATE POLICY "Users can update own work sources"
   ON work_sources FOR UPDATE
-  USING (auth.uid() = user_id);
-
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete own work sources"
   ON work_sources FOR DELETE
   USING (auth.uid() = user_id);

@@ -1,4 +1,4 @@
-# VOCA - Tech Stack & Dependencies
+# AEDEN - Tech Stack & Dependencies
 
 > Comprehensive list of all technologies, libraries, and tools used in the project for fast installation and management.
 
