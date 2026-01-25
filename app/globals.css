@@ -115,11 +115,122 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Dashboard-specific variables (Shopeers-inspired) */
+:root {
+  /* Sidebar - Light Theme */
+  --sidebar-nav-bg: #ffffff;
+  --sidebar-nav-text: #4b5563;
+  --sidebar-nav-text-muted: #9ca3af;
+  --sidebar-nav-active: #3b82f6;
+  --sidebar-nav-active-bg: #eff6ff;
+  --sidebar-nav-hover-bg: #f9fafb;
+  --sidebar-nav-border: #e5e7eb;
+
+  /* Content Area */
+  --content-bg: #f8fafc;
+
+  /* Metrics */
+  --metric-positive: #22c55e;
+  --metric-negative: #ef4444;
+  --metric-positive-bg: #dcfce7;
+  --metric-negative-bg: #fee2e2;
+
+  /* Accent */
+  --highlight-amber: #f59e0b;
+  --highlight-amber-bg: #fef3c7;
+
+  /* Primary Blue (adjusted for Shopeers style) */
+  --primary-blue: #3b82f6;
+  --primary-blue-light: #60a5fa;
+  --primary-blue-dark: #2563eb;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Dashboard Layout Utilities */
+@layer components {
+
+  /* Stat Card Styles */
+  .stat-card {
+    @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  .stat-value {
+    @apply text-3xl font-bold text-foreground tracking-tight;
+  }
+
+  .stat-label {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  /* Trend Badge */
+  .trend-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  .trend-badge-positive {
+    background-color: var(--metric-positive-bg);
+    color: var(--metric-positive);
+  }
+
+  .trend-badge-negative {
+    background-color: var(--metric-negative-bg);
+    color: var(--metric-negative);
+  }
+
+  /* Dark Sidebar Nav Item */
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200;
+    color: var(--sidebar-nav-text);
+  }
+
+  .sidebar-nav-item:hover {
+    background-color: var(--sidebar-nav-hover-bg);
+    color: #e2e8f0;
+  }
+
+  .sidebar-nav-item.active {
+    background-color: var(--sidebar-nav-active-bg);
+    color: var(--sidebar-nav-active);
+  }
+
+  .sidebar-nav-item.active svg {
+    color: var(--sidebar-nav-active);
+  }
+
+  /* Chart Gradient */
+  .chart-gradient {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0) 100%);
+  }
+
+  /* Premium Card Glow (for upgrade prompts) */
+  .premium-card {
+    @apply relative overflow-hidden rounded-2xl p-5;
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+  }
+
+  .premium-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+    pointer-events: none;
   }
 }

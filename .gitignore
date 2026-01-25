@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent skills (cloned from external repos)
+.agent/skills/vercel-labs-agent-skills/
+.agent/skills/anthropics-skills/
+.agent/skills/supabase-agent-skills/

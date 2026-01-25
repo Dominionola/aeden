@@ -2,6 +2,42 @@
 
 > Design System for the Multi-Persona Build-in-Public Tool
 
+### Dashboard Design Reference
+> **Inspiration:** [Shopeers AI-Powered B2B eCommerce Analytics Dashboard](https://dribbble.com/shots/26628350-Shopeers-AI-Powered-B2B-eCommerce-Analytics-Dashboard)
+
+#### Key Visual Patterns to Follow:
+
+| Element | Implementation |
+|---------|---------------|
+| **Sidebar** | White background, gray text, blue-50 active state, right border |
+| **Content Area** | Light gray background (`--gray-50: #f8fafc`), generous padding |
+| **Stat Cards** | White bg, large rounded corners (`--radius-xl`), soft shadow |
+| **Metric Numbers** | 36px+ bold, with small trend badges (green/red) |
+| **Charts** | Gradient fills using `--primary-300` to `--primary-500` |
+| **Data Tables** | Clean rows, product thumbnails, amber-highlighted values |
+| **AI Assistant** | Floating widget with blue gradient icon, chat interface |
+| **Upgrade Card** | Blue gradient card at bottom of sidebar |
+
+#### Dashboard Color Mapping:
+```css
+/* Sidebar - Light Theme */
+--sidebar-bg: #ffffff;           /* White background */
+--sidebar-text: #4b5563;         /* Gray-600 for text */
+--sidebar-text-muted: #9ca3af;   /* Gray-400 for icons */
+--sidebar-active: #3b82f6;       /* Primary blue */
+--sidebar-active-bg: #eff6ff;    /* Blue-50 */
+--sidebar-border: #e5e7eb;       /* Gray-200 */
+
+/* Metrics */
+--metric-positive: #22c55e;      /* Green for +% */
+--metric-negative: #ef4444;      /* Red for -% */
+--metric-badge-positive-bg: #dcfce7;
+--metric-badge-negative-bg: #fee2e2;
+
+/* Accent highlights */
+--highlight-amber: #f59e0b;      /* For prices, important values */
+```
+
 ---
 
 ## 1. Brand Identity
