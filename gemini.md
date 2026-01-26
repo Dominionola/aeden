@@ -18,6 +18,32 @@
 
 ## Session Log
 
+### January 26, 2026 - Dashboard Scope Correction
+
+**What was done:**
+- Reviewed plan.md and identified dashboard had e-commerce metrics (Page Views, $446.7K) from Shopeers reference
+- Redesigned dashboard with Aeden-relevant components:
+  - Stats: Posts This Week, Total Impressions, Engagement Rate, Connected Sources
+  - Recent Posts list with Draft/Published/Scheduled status
+  - Quick Actions: New Post, Connect Source, Train Voice
+  - Sources panel showing connection status
+  - Threads connection prompt
+- Simplified sidebar: Dashboard, Posts, Sources, Analytics, Voice & Persona, Settings
+- Simplified header: Notifications + user menu only
+- Expanded Persona Training section in plan.md with database model details
+
+**Files modified:**
+- `app/dashboard/page.tsx` - Complete redesign for Aeden scope
+- `components/dashboard/sidebar.tsx` - Simplified navigation
+- `components/dashboard/header.tsx` - Removed e-commerce filters
+- `plan.md` - Updated status, expanded Persona Training section
+
+**Status:**
+- Dashboard UI ✅ Complete (now scoped correctly)
+- Next: Complete Manual Input (save posts to DB, post listing)
+
+---
+
 ### January 25, 2026 - Dashboard Redesign
 
 **What was done:**

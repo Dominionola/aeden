@@ -105,76 +105,72 @@
 
 ## 3. Typography
 
-### Font Families
+### Font Family - Geist
+Aeden uses **Geist**, Vercel's modern typeface designed for clarity and readability.
+
 ```css
-/* Headers - Premium serif for editorial feel */
---font-heading: "Tiempos Headline Regular", "Tiempos Headline Regular Placeholder", Georgia, serif;
+/* Primary - Geist Sans */
+--font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-/* Body - Clean sans-serif for readability */
---font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-
-/* Code - Monospace for technical content */
---font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+/* Monospace - Geist Mono */
+--font-mono: 'Geist Mono', 'SF Mono', 'Monaco', monospace;
 ```
 
-### Font Loading
-```html
-<!-- Add to <head> or use next/font -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+### Implementation (Next.js)
+```tsx
+// app/layout.tsx
+import { Geist, Geist_Mono } from "next/font/google";
 
-<!-- Tiempos Headline: Self-host or use font service (licensed font) -->
-<style>
-  @font-face {
-    font-family: 'Tiempos Headline Regular';
-    src: url('/fonts/TiemposHeadline-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-display: swap;
-  }
-</style>
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+// Apply to body
+<body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
 ```
 
 ### Type Scale
-| Name | Size | Weight | Line Height | Font | Usage |
-|------|------|--------|-------------|------|-------|
-| `display` | 48px | 400 | 1.1 | Tiempos | Hero headings |
-| `h1` | 36px | 400 | 1.2 | Tiempos | Page titles |
-| `h2` | 28px | 400 | 1.25 | Tiempos | Section headers |
-| `h3` | 22px | 400 | 1.3 | Tiempos | Card titles |
-| `h4` | 18px | 400 | 1.35 | Tiempos | Subsections |
-| `body-lg` | 16px | 400 | 1.6 | Inter | Lead paragraphs |
-| `body` | 14px | 400 | 1.6 | Inter | Body text |
-| `body-sm` | 13px | 400 | 1.5 | Inter | Secondary text |
-| `caption` | 12px | 500 | 1.4 | Inter | Labels, badges |
-| `overline` | 11px | 600 | 1.3 | Inter | Category labels |
-
-### CSS Classes
-```css
-/* Headings - Tiempos */
-.heading-display { font-family: var(--font-heading); font-size: 48px; line-height: 1.1; }
-.heading-1 { font-family: var(--font-heading); font-size: 36px; line-height: 1.2; }
-.heading-2 { font-family: var(--font-heading); font-size: 28px; line-height: 1.25; }
-.heading-3 { font-family: var(--font-heading); font-size: 22px; line-height: 1.3; }
-.heading-4 { font-family: var(--font-heading); font-size: 18px; line-height: 1.35; }
-
-/* Body - Inter */
-.body-lg { font-family: var(--font-sans); font-size: 16px; line-height: 1.6; }
-.body { font-family: var(--font-sans); font-size: 14px; line-height: 1.6; }
-.body-sm { font-family: var(--font-sans); font-size: 13px; line-height: 1.5; }
-.caption { font-family: var(--font-sans); font-size: 12px; font-weight: 500; }
-```
+| Name | Size | Weight | Line Height | Usage |
+|------|------|--------|-------------|-------|
+| `display` | 48px | 700 | 1.1 | Hero headings |
+| `h1` | 36px | 700 | 1.2 | Page titles |
+| `h2` | 28px | 600 | 1.25 | Section headers |
+| `h3` | 22px | 600 | 1.3 | Card titles |
+| `h4` | 18px | 600 | 1.35 | Subsections |
+| `body-lg` | 16px | 400 | 1.6 | Lead paragraphs |
+| `body` | 14px | 400 | 1.6 | Body text |
+| `body-sm` | 13px | 400 | 1.5 | Secondary text |
+| `caption` | 12px | 500 | 1.4 | Labels, badges |
+| `overline` | 11px | 600 | 1.3 | Category labels |
 
 ### Font Weights
 ```css
-/* Tiempos only uses Regular (400) - no bold variants */
---font-heading-weight: 400;
-
-/* Inter supports full range */
 --font-regular: 400;
 --font-medium: 500;
 --font-semibold: 600;
 --font-bold: 700;
 ```
+
+### Tailwind Config
+The font is already configured via CSS variables in `globals.css`:
+```css
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+```
+
+### Why Geist?
+> - **Optimized for UI**: Clear, consistent letterforms designed for interfaces
+> - **Variable font**: Single file, all weights (faster loading)
+> - **Next.js native**: Zero-config with `next/font`
+> - **Modern aesthetic**: Clean, professional look that matches our dashboard style
 
 ### Typography Pairing Notes
 > **Why this combo works:**
