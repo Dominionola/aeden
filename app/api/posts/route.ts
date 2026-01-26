@@ -83,9 +83,11 @@ export async function PUT(request: NextRequest) {
 
         if (error) {
             console.error("Update post error:", error);
+            if (error.code === "PGRST116") {
+                return NextResponse.json({ error: "Post not found" }, { status: 404 });
+            }
             return NextResponse.json({ error: "Failed to update post" }, { status: 500 });
         }
-
         return NextResponse.json(data);
     } catch (error) {
         console.error("Update post route error:", error);

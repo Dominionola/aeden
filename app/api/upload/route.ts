@@ -14,12 +14,11 @@ export async function POST(request: NextRequest) {
         }
 
         const formData = await request.formData();
-        const file = formData.get("file") as File;
+        const file = formData.get("file");
 
-        if (!file) {
+        if (!file || !(file instanceof File)) {
             return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
         }
-
         // Validation
         const MAX_SIZE = 5 * 1024 * 1024; // 5MB
         if (file.size > MAX_SIZE) {
@@ -38,9 +37,15 @@ export async function POST(request: NextRequest) {
         }
 
         const fileExt = file.name.split(".").pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        const MIME_TO_EXT: Record<string, string> = {
+            "image/jpeg": "jpg",
+            "image/png": "png",
+            "image/gif": "gif",
+            "image/webp": "webp",
+        };
 
-        const { error: uploadError } = await supabase.storage
+        const fileExt = MIME_TO_EXT[file.type];
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`; const { error: uploadError } = await supabase.storage
             .from("post-images")
             .upload(fileName, file, {
                 cacheControl: "3600",
