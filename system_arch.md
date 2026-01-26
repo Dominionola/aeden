@@ -276,6 +276,21 @@ export async function generate(options: GenerateOptions): Promise<string> {
 
 ## Database Schema
 
+### Database Schema Rules
+
+#### Modular Migration Files
+To facilitate easy copying to the Supabase SQL Editor, migration files should be split by "implementation steps" or logical layers rather than monolithic files.
+
+**Recommended Splitting Structure:**
+1.  **Tables**: Base structure (`001a_tables.sql`)
+2.  **Indexes**: Performance optimizations (`001b_indexes.sql`)
+3.  **RLS Policies**: Security rules (`001c_rls.sql`)
+4.  **Triggers/Functions**: Automation & Logic (`001d_triggers.sql`)
+
+This specific order ensures dependencies (tables exist before policies/triggers) are respected when running scripts sequentially.
+
+---
+
 ### Tables Overview
 ```
 ┌─────────────────┐     ┌─────────────────┐

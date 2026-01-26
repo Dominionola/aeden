@@ -1,21 +1,23 @@
+
 "use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Send, Save, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 interface PostEditorProps {
     initialContent?: string;
+    postId?: string;
 }
 
-export function PostEditor({ initialContent = "" }: PostEditorProps) {
+export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
     const [input, setInput] = useState("");
     const [generatedContent, setGeneratedContent] = useState(initialContent);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -62,16 +64,38 @@ export function PostEditor({ initialContent = "" }: PostEditorProps) {
             return;
         }
 
-        const { error } = await supabase.from("posts").insert({
-            content: generatedContent,
-            user_id: user.id,
-            status,
-            ai_model_version: model,
-            source_type: "manual",
-        });
+        let error;
+
+        if (postId) {
+            // Update existing post
+            const { error: updateError } = await supabase
+                .from("posts")
+                .update({
+                    content: generatedContent,
+                    status,
+                    ai_model_version: model,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq("id", postId)
+                .eq("user_id", user.id);
+            error = updateError;
+        } else {
+            // Create new post
+            const { error: insertError } = await supabase
+                .from("posts")
+                .insert({
+                    content: generatedContent,
+                    user_id: user.id,
+                    status,
+                    ai_model_version: model,
+                    source_type: "manual",
+                });
+            error = insertError;
+        }
 
         if (error) {
             toast.error("Failed to save post");
+            console.error(error);
             return;
         }
 
@@ -82,105 +106,117 @@ export function PostEditor({ initialContent = "" }: PostEditorProps) {
     return (
         <div className="grid gap-6 lg:grid-cols-2">
             {/* Input Section */}
-            <div className="space-y-6">
-                <div>
-                    <h2 className="text-lg font-semibold mb-2">What did you work on?</h2>
-                    <p className="text-sm text-muted-foreground mb-4">
+            <Card className="shadow-sm border-gray-200">
+                <CardHeader>
+                    <CardTitle>Input</CardTitle>
+                    <CardDescription>
                         Paste your updates, commit messages, or rough notes here.
-                        Aeden will rewrite them into an engaging post.
-                    </p>
-                    <Textarea
-                        placeholder="I built a new feature for... I fixed a bug in... I learned how to..."
-                        className="min-h-[200px] font-mono text-sm"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
                     <div className="space-y-2">
-                        <Label>AI Model</Label>
-                        <Select value={model} onValueChange={setModel}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="gemini">Gemini 2.0 Flash (Fast)</SelectItem>
-                                <SelectItem value="claude">Claude Sonnet (High Quality)</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Label htmlFor="input-content">What did you work on?</Label>
+                        <Textarea
+                            id="input-content"
+                            placeholder="I built a new feature for... I fixed a bug in... I learned how to..."
+                            className="min-h-[200px] font-mono text-sm resize-none bg-gray-50/50 focus:bg-white transition-colors"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                        />
                     </div>
-                    <div className="space-y-2">
-                        <Label>Tone</Label>
-                        <Select value={tone} onValueChange={setTone}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="casual">Casual</SelectItem>
-                                <SelectItem value="professional">Professional</SelectItem>
-                                <SelectItem value="technical">Technical</SelectItem>
-                                <SelectItem value="humorous">Humorous</SelectItem>
-                                <SelectItem value="inspirational">Inspirational</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
 
-                <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handleGenerate}
-                    disabled={isGenerating || !input.trim()}
-                >
-                    {isGenerating ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating...
-                        </>
-                    ) : (
-                        <>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Generate Post
-                        </>
-                    )}
-                </Button>
-            </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>AI Model</Label>
+                            <Select value={model} onValueChange={setModel}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="gemini">Gemini 2.0 Flash</SelectItem>
+                                    <SelectItem value="claude">Claude Sonnet</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tone</Label>
+                            <Select value={tone} onValueChange={setTone}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="casual">Casual</SelectItem>
+                                    <SelectItem value="professional">Professional</SelectItem>
+                                    <SelectItem value="technical">Technical</SelectItem>
+                                    <SelectItem value="humorous">Humorous</SelectItem>
+                                    <SelectItem value="inspirational">Inspirational</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button
+                        className="w-full"
+                        size="lg"
+                        onClick={handleGenerate}
+                        disabled={isGenerating || !input.trim()}
+                    >
+                        {isGenerating ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating...
+                            </>
+                        ) : (
+                            <>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Generate Post
+                            </>
+                        )}
+                    </Button>
+                </CardFooter>
+            </Card>
 
             {/* Preview Section */}
-            <div className="space-y-6">
-                <div>
-                    <h2 className="text-lg font-semibold mb-2">Preview</h2>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        Review and edit the generated post before publishing.
-                    </p>
-                    <Card>
-                        <CardContent className="p-4">
-                            <Textarea
-                                value={generatedContent}
-                                onChange={(e) => setGeneratedContent(e.target.value)}
-                                className="min-h-[200px] border-0 focus-visible:ring-0 resize-none"
-                                placeholder="Generated post will appear here..."
-                            />
-                            <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
-                                <span>{generatedContent.length}/500 chars</span>
-                                <span className={generatedContent.length > 500 ? "text-destructive" : ""}>
-                                    {500 - generatedContent.length} remaining
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
+            <Card className="shadow-sm border-gray-200 flex flex-col h-full">
+                <CardHeader>
+                    <CardTitle>Preview</CardTitle>
+                    <CardDescription>
+                        Review and edit generated content.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1">
+                    <div className="space-y-2 h-full">
+                        <Label htmlFor="preview-content" className="sr-only">Preview Content</Label>
+                        <Textarea
+                            id="preview-content"
+                            value={generatedContent}
+                            onChange={(e) => setGeneratedContent(e.target.value)}
+                            className="min-h-[300px] h-full border-0 focus-visible:ring-0 resize-none text-base leading-relaxed p-0 shadow-none -ml-1"
+                            placeholder="Generated post will appear here..."
+                        />
+                    </div>
+                </CardContent>
+                <div className="px-6 pb-2">
+                    <div className="flex justify-between items-center text-xs text-muted-foreground border-t pt-4">
+                        <span>{generatedContent.length}/500 chars</span>
+                        <span className={generatedContent.length > 500 ? "text-destructive font-medium" : ""}>
+                            {500 - generatedContent.length} remaining
+                        </span>
+                    </div>
                 </div>
-
-                <div className="flex gap-4">
+                <CardFooter className="flex gap-3 pt-4">
                     <Button variant="outline" className="flex-1" onClick={() => handleSave("draft")}>
+                        <Save className="mr-2 h-4 w-4" />
                         Save Draft
                     </Button>
-                    <Button className="flex-1" onClick={() => handleSave("scheduled")}>
+                    <Button variant="secondary" className="flex-1" onClick={() => handleSave("scheduled")}>
+                        <Calendar className="mr-2 h-4 w-4" />
                         Schedule
                     </Button>
-                </div>
-            </div>
+                    {/* Placeholder for future specific publish action if needed, or keep secondary */}
+                </CardFooter>
+            </Card>
         </div>
     );
 }

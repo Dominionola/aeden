@@ -109,12 +109,12 @@
 
 ### PENDING (Critical for MVP)
 
-- [ ] **Image Upload** - `app/api/upload/route.ts`
+- [x] **Image Upload** - `app/api/upload/route.ts`
   - Upload to Supabase Storage bucket: `post-images`
   - Max 5MB, JPEG/PNG/GIF/WebP
   - Return public URL
 
-- [ ] **Save to Database** - `app/api/posts/route.ts`
+- [x] **Save to Database** - `app/api/posts/route.ts`
   - POST: Create draft post
   - PUT: Update post
   - DELETE: Delete post
@@ -505,10 +505,10 @@ BUSINESS ($79/month):
 ## 📝 NEXT IMMEDIATE STEPS
 
 ### This Week (Week 3):
-- [ ] Build `app/api/upload/route.ts` (image upload to Supabase Storage)
-- [ ] Build `app/api/posts/route.ts` (CRUD operations)
-- [ ] Build `app/dashboard/posts/page.tsx` (post listing)
-- [ ] Build `app/dashboard/posts/[id]/page.tsx` (edit post)
+- [x] Build `app/api/upload/route.ts` (image upload to Supabase Storage)
+- [x] Build `app/api/posts/route.ts` (CRUD operations)
+- [x] Build `app/dashboard/posts/page.tsx` (post listing)
+- [x] Build `app/dashboard/posts/[id]/page.tsx` (edit post)
 - [ ] Set Up Meta Developer Account for Threads
 
 ### Next Week (Week 4):

@@ -53,7 +53,7 @@ export function Header() {
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                            <Link href="/dashboard/settings" className="flex items-center gap-2 cursor-pointer">
+                            <Link href="/dashboard/settings/profile" className="flex items-center gap-2 cursor-pointer">
                                 <User className="h-4 w-4" />
                                 Profile
                             </Link>
@@ -69,8 +69,7 @@ export function Header() {
                                 <Settings className="h-4 w-4" />
                                 Settings
                             </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        </DropdownMenuItem>                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                             className="text-destructive flex items-center gap-2 cursor-pointer"
                             onClick={() => {
