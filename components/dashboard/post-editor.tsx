@@ -25,6 +25,8 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
     const [tone, setTone] = useState("casual");
     const router = useRouter();
 
+    const [isPublishing, setIsPublishing] = useState(false);
+
     const handleGenerate = async () => {
         if (!input.trim()) return;
 
@@ -53,54 +55,127 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
         }
     };
 
-    const handleSave = async (status: "draft" | "scheduled") => {
-        if (!generatedContent.trim()) return;
+    // Helper to save post and return the ID
+    const savePostToDb = async (status: "draft" | "scheduled" | "publishing") => {
+        if (!generatedContent.trim()) return null;
 
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
             toast.error("You must be logged in to save posts");
-            return;
+            return null;
         }
 
+        let currentPostId = postId;
         let error;
 
-        if (postId) {
+        // Map 'publishing' status to 'draft' for DB save initially, 
+        // to ensure we have an ID before trying to publish.
+        // We will update to 'published' after success.
+        const dbStatus = status === "publishing" ? "draft" : status;
+
+        if (currentPostId) {
             // Update existing post
             const { error: updateError } = await supabase
                 .from("posts")
                 .update({
                     content: generatedContent,
-                    status,
+                    status: dbStatus,
                     ai_model_version: model,
                     updated_at: new Date().toISOString(),
                 })
-                .eq("id", postId)
+                .eq("id", currentPostId)
                 .eq("user_id", user.id);
             error = updateError;
         } else {
             // Create new post
-            const { error: insertError } = await supabase
+            const { data, error: insertError } = await supabase
                 .from("posts")
                 .insert({
                     content: generatedContent,
                     user_id: user.id,
-                    status,
+                    status: dbStatus,
                     ai_model_version: model,
                     source_type: "manual",
-                });
+                })
+                .select("id")
+                .single();
+
             error = insertError;
+            if (data) {
+                currentPostId = data.id;
+                // If we created a new post, we might want to update the URL or local state
+                // For now we just return the ID
+            }
         }
 
         if (error) {
-            toast.error("Failed to save post");
+            toast.error("Failed to auto-save post");
             console.error(error);
-            return;
+            return null;
         }
 
-        toast.success(status === "draft" ? "Draft saved!" : "Post scheduled!");
-        router.push("/dashboard/posts");
+        return currentPostId;
+    };
+
+    const handleSave = async (status: "draft" | "scheduled") => {
+        const savedId = await savePostToDb(status);
+        if (savedId) {
+            toast.success(status === "draft" ? "Draft saved!" : "Post scheduled!");
+            if (!postId) {
+                router.push(`/dashboard/posts/${savedId}`);
+            } else {
+                router.push("/dashboard/posts");
+            }
+        }
+    };
+
+    const handlePublish = async () => {
+        if (!generatedContent.trim()) return;
+        setIsPublishing(true);
+
+        try {
+            // 1. Save content first
+            const savedPostId = await savePostToDb("publishing");
+            if (!savedPostId) throw new Error("Could not save post before publishing");
+
+            // 2. Call Publish API
+            const response = await fetch("/api/posts/publish", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ postId: savedPostId }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 403) {
+                    toast.error("Threads not connected", {
+                        description: "Please connect your account in Settings.",
+                        action: {
+                            label: "Connect",
+                            onClick: () => router.push("/dashboard/settings/connections")
+                        }
+                    });
+                    return;
+                }
+                throw new Error(data.error || "Publishing failed");
+            }
+
+            toast.success("Published to Threads!", {
+                description: "Your post is now live."
+            });
+            router.push("/dashboard/posts");
+
+        } catch (error: any) {
+            toast.error("Failed to publish", {
+                description: error.message
+            });
+            console.error(error);
+        } finally {
+            setIsPublishing(false);
+        }
     };
 
     return (
@@ -206,15 +281,27 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                     </div>
                 </div>
                 <CardFooter className="flex gap-3 pt-4">
-                    <Button variant="outline" className="flex-1" onClick={() => handleSave("draft")}>
+                    <Button variant="outline" className="flex-1" onClick={() => handleSave("draft")} disabled={isPublishing}>
                         <Save className="mr-2 h-4 w-4" />
                         Save Draft
                     </Button>
-                    <Button variant="secondary" className="flex-1" onClick={() => handleSave("scheduled")}>
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Schedule
+                    <Button
+                        className="flex-1 bg-black text-white hover:bg-gray-800"
+                        onClick={handlePublish}
+                        disabled={isPublishing || !generatedContent.trim()}
+                    >
+                        {isPublishing ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Publishing...
+                            </>
+                        ) : (
+                            <>
+                                <Send className="mr-2 h-4 w-4" />
+                                Publish to Threads
+                            </>
+                        )}
                     </Button>
-                    {/* Placeholder for future specific publish action if needed, or keep secondary */}
                 </CardFooter>
             </Card>
         </div>

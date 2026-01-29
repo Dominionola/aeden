@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const fileExt = file.name.split(".").pop();
         const MIME_TO_EXT: Record<string, string> = {
             "image/jpeg": "jpg",
             "image/png": "png",
@@ -44,8 +43,10 @@ export async function POST(request: NextRequest) {
             "image/webp": "webp",
         };
 
-        const fileExt = MIME_TO_EXT[file.type];
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`; const { error: uploadError } = await supabase.storage
+        const ext = MIME_TO_EXT[file.type];
+        const fileName = `${user.id}/${Date.now()}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
             .from("post-images")
             .upload(fileName, file, {
                 cacheControl: "3600",
