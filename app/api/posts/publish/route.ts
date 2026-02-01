@@ -77,31 +77,31 @@ export async function POST(request: NextRequest) {
         } catch (apiError: any) {
             console.error("Threads API Error:", apiError);
             return NextResponse.json(
-                { error: `Threads API failed: ${apiError.message}` },
+                { error: "Failed to publish to Threads" },
                 { status: 502 }
             );
         }
-
         // 5. Update Post Status
+        // 5. Update Post Status
+        const now = new Date().toISOString();
         const { error: updateError } = await supabase
             .from("posts")
             .update({
                 status: "published",
                 platform: "threads",
                 platform_post_id: publishId,
-                published_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                published_at: now,
+                updated_at: now
             })
             .eq("id", postId);
 
         if (updateError) {
+            console.error("DB update failed after successful publish. postId:", postId, "platform_post_id:", publishId, "error:", updateError);
             return NextResponse.json(
-                { error: "Failed to update post status" },
+                { error: "Post was published but failed to update status. Please contact support.", platform_post_id: publishId },
                 { status: 500 }
             );
-        }
-
-        return NextResponse.json({ success: true, platform_post_id: publishId });
+        } return NextResponse.json({ success: true, platform_post_id: publishId });
 
     } catch (error: any) {
         console.error("Publish Route Error:", error);
