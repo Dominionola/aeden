@@ -15,7 +15,10 @@ export function ThreadsConnectButton({ isConnected, threadsHandle }: ThreadsConn
     const [isLoading, setIsLoading] = useState(false);
 
     const handleConnect = () => {
+        console.log("🔵 Threads Connect Button clicked!");
+        console.log("🔵 Setting loading state...");
         setIsLoading(true);
+        console.log("🔵 Redirecting to:", "/api/threads/auth?origin=/dashboard/settings/connections");
         // Redirect to the Auth API
         // We set origin so we come back to this settings page
         window.location.href = "/api/threads/auth?origin=/dashboard/settings/connections";

@@ -162,9 +162,11 @@ export function Sidebar() {
                         <p className="text-xs text-gray-500 mb-3">
                             Publish your posts directly to Threads.
                         </p>
-                        <Button variant="outline" size="sm" className="w-full text-xs">
-                            Connect Account
-                        </Button>
+                        <Link href="/dashboard/settings/connections">
+                            <Button variant="outline" size="sm" className="w-full text-xs">
+                                Connect Account
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             </div>
