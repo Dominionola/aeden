@@ -11,14 +11,14 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const origin = searchParams.get("origin") || "/dashboard/settings";
 
+    // We could encode the origin in the state parameter to redirect back correctly
+    let authUrl: string;
     try {
-        // We could encode the origin in the state parameter to redirect back correctly
-        const authUrl = threadsClient.getAuthUrl(origin);
-        console.log("🚀 Final Auth URL:", authUrl);
-
-        return redirect(authUrl);
+        authUrl = threadsClient.getAuthUrl(origin);
     } catch (error) {
-        console.error("🚀 Error generating auth URL:", error);
+        console.error("Error generating auth URL:", error);
         throw error;
     }
+
+    return redirect(authUrl);
 }

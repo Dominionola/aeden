@@ -164,10 +164,15 @@ export class ThreadsClient {
         });
 
         if (!response.ok) {
-            const error = await response.json() as ThreadsError;
-            throw new Error(`Failed to publish container: ${error.error.message}`);
+            let errorMessage: string;
+            try {
+                const error = await response.json() as ThreadsError;
+                errorMessage = error.error?.message ?? JSON.stringify(error);
+            } catch {
+                errorMessage = response.statusText;
+            }
+            throw new Error(`Failed to publish container: ${errorMessage}`);
         }
-
         const data = await response.json() as ThreadsPublishResponse;
         return data.id;
     }
