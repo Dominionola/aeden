@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     let authUrl: string;
     try {
         authUrl = threadsClient.getAuthUrl(origin);
+        console.log("🚀 Final Auth URL before redirect:", authUrl);
     } catch (error) {
         console.error("Error generating auth URL:", error);
         throw error;
