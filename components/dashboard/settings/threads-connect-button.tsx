@@ -1,9 +1,8 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface ThreadsConnectButtonProps {
     isConnected: boolean;
@@ -13,12 +12,38 @@ interface ThreadsConnectButtonProps {
 export function ThreadsConnectButton({ isConnected, threadsHandle }: ThreadsConnectButtonProps) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [isDisconnecting, setIsDisconnecting] = useState(false);
 
     const handleConnect = () => {
         setIsLoading(true);
         // Redirect to the Auth API
         // We set origin so we come back to this settings page
         window.location.href = "/api/threads/auth?origin=/dashboard/settings/connections";
+    };
+
+    const handleDisconnect = async () => {
+        if (!confirm("Are you sure you want to disconnect your Threads account? You'll need to reconnect to publish posts.")) {
+            return;
+        }
+
+        setIsDisconnecting(true);
+        try {
+            const response = await fetch("/api/threads/disconnect", {
+                method: "POST"
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to disconnect");
+            }
+
+            toast.success("Threads disconnected successfully");
+            router.refresh();
+        } catch (error) {
+            toast.error("Failed to disconnect Threads account");
+            console.error(error);
+        } finally {
+            setIsDisconnecting(false);
+        }
     };
 
     if (isConnected) {
@@ -43,7 +68,22 @@ export function ThreadsConnectButton({ isConnected, threadsHandle }: ThreadsConn
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Active
                     </span>
-                    {/* Disconnect button would go here */}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDisconnect}
+                        disabled={isDisconnecting}
+                        className="text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
+                    >
+                        {isDisconnecting ? (
+                            <>
+                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                Disconnecting...
+                            </>
+                        ) : (
+                            "Disconnect"
+                        )}
+                    </Button>
                 </div>
             </div>
         );

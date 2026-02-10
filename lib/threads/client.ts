@@ -91,8 +91,14 @@ export class ThreadsClient {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Failed to exchange for long-lived token: ${JSON.stringify(error)}`);
+            let errorMessage: string;
+            try {
+                const error = await response.json();
+                errorMessage = JSON.stringify(error);
+            } catch {
+                errorMessage = response.statusText;
+            }
+            throw new Error(`Failed to exchange for long-lived token: ${errorMessage}`);
         }
 
         const data = await response.json();

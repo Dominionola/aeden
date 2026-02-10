@@ -88,10 +88,11 @@ export async function POST(request: NextRequest) {
                 accessToken = refreshedToken.access_token;
 
                 // Update token in database
-                const newExpiresAt = new Date();
-                newExpiresAt.setDate(newExpiresAt.getDate() + 60);
+                const newExpiresAt = new Date(
+                    Date.now() + (refreshedToken.expires_in || 60 * 24 * 60 * 60) * 1000
+                );
 
-                await supabase
+                const { error: tokenUpdateError } = await supabase
                     .from("social_accounts")
                     .update({
                         access_token: accessToken,
@@ -101,6 +102,10 @@ export async function POST(request: NextRequest) {
                     .eq("user_id", user.id)
                     .eq("platform", "threads");
 
+                if (tokenUpdateError) {
+                    console.warn("⚠️ Token refreshed but failed to persist:", tokenUpdateError.message);
+                    // Continue with the refreshed token for this request
+                }
                 console.log("✅ Token refreshed successfully");
             } catch (refreshError: any) {
                 console.error("❌ Failed to refresh token:", refreshError.message);

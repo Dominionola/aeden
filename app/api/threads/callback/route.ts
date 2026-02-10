@@ -51,9 +51,11 @@ export async function GET(request: NextRequest) {
             console.log("✅ Exchanged for long-lived token, expires:", tokenExpiresAt);
         } catch (exchangeError) {
             console.warn("⚠️ Failed to exchange for long-lived token, using short-lived:", exchangeError);
-            // Still proceed with short-lived token
+            // Short-lived tokens expire in ~1 hour
+            const shortLivedExpiration = new Date();
+            shortLivedExpiration.setHours(shortLivedExpiration.getHours() + 1);
+            tokenExpiresAt = shortLivedExpiration.toISOString();
         }
-
         // 4. Get User Details (for handle/profile pic)
         let threadsUser;
         try {
