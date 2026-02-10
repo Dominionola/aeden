@@ -17,8 +17,26 @@ import {
     CheckCircle2,
     AlertCircle
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let isThreadsConnected = false;
+
+    if (user) {
+        const { data: threadsAccount } = await supabase
+            .from("social_accounts")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("platform", "threads")
+            .eq("is_active", true)
+            .single();
+
+        isThreadsConnected = !!threadsAccount;
+    }
+
     return (
         <div className="space-y-6" style={{ backgroundColor: '#f8fafc', minHeight: '100%' }}>
             {/* Welcome Header */}
@@ -63,10 +81,10 @@ export default function DashboardPage() {
                 />
                 <StatCard
                     title="Connected Sources"
-                    value="1"
-                    trend=""
+                    value={isThreadsConnected ? "2" : "1"}
+                    trend={isThreadsConnected ? "+1" : ""}
                     trendDirection="up"
-                    description="Manual input active"
+                    description={isThreadsConnected ? "Manual + Threads" : "Manual input active"}
                     icon={<Link2 className="h-5 w-5 text-violet-500" />}
                 />
             </div>
@@ -246,15 +264,28 @@ export default function DashboardPage() {
                                 </div>
                                 <div className="flex-1">
                                     <div className="font-medium text-gray-900 text-sm">Threads</div>
-                                    <div className="text-xs text-amber-600">Not connected yet</div>
+                                    <div className={`text-xs ${isThreadsConnected ? "text-emerald-600" : "text-amber-600"}`}>
+                                        {isThreadsConnected ? "Connected" : "Not connected yet"}
+                                    </div>
                                 </div>
-                                <Button size="sm" className="bg-gray-900 hover:bg-gray-800 text-white">
-                                    Connect
-                                </Button>
+                                {!isThreadsConnected && (
+                                    <Link href="/dashboard/settings/connections">
+                                        <Button size="sm" className="bg-gray-900 hover:bg-gray-800 text-white">
+                                            Connect
+                                        </Button>
+                                    </Link>
+                                )}
+                                {isThreadsConnected && (
+                                    <div className="p-1 rounded-full bg-emerald-100">
+                                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                    </div>
+                                )}
                             </div>
-                            <p className="text-xs text-gray-500 mt-3">
-                                Connect your Threads account to publish posts directly.
-                            </p>
+                            {!isThreadsConnected && (
+                                <p className="text-xs text-gray-500 mt-3">
+                                    Connect your Threads account to publish posts directly.
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
@@ -289,8 +320,8 @@ function StatCard({
                             <span className="text-2xl font-bold text-gray-900">{value}</span>
                             {trend && (
                                 <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${trendDirection === "up"
-                                        ? "text-emerald-600"
-                                        : "text-red-600"
+                                    ? "text-emerald-600"
+                                    : "text-red-600"
                                     }`}>
                                     {trendDirection === "up" ? (
                                         <TrendingUp className="h-3 w-3" />
