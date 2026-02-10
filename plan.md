@@ -30,14 +30,14 @@
 | **Manual Input (KILLER FEATURE)** | 🔄 In Progress | 70% | P0 |
 | **Image Upload** | ⏳ Not Started | 0% | P0 |
 | **Save to Database** | ⏳ Not Started | 0% | P0 |
-| **Threads Publishing** | ⏳ Not Started | 0% | P0 |
+| **Threads Publishing** | 🔄 In Progress | 20% | P0 |
 | **Post Listing** | ⏳ Not Started | 0% | P0 |
 | **Basic Analytics** | ⏳ Not Started | 0% | P0 |
 | **GitHub Integration** | ⏳ Not Started | 0% | P1 |
 | **Notion Integration** | ⏳ Not Started | 0% | P1 |
 | **Persona Training** | ⏳ Not Started | 0% | P1 |
 
-**Overall MVP Progress: ~35%**  
+**Overall MVP Progress: ~45%**  
 **Target MVP Launch**: 8 weeks from project start (March 15, 2026)
 
 ---
@@ -138,11 +138,11 @@
 
 > **Why Threads-first**: FREE API, unlimited posts. Twitter = $100/month. LinkedIn = V2.
 
-### OAuth Flow
-- [ ] `app/api/threads/auth/route.ts` - Initiate Meta OAuth
-- [ ] `app/api/threads/callback/route.ts` - Exchange code for tokens
-- [ ] Store in `social_accounts` table
-- [ ] `app/dashboard/settings/connections/page.tsx` - Manage connected accounts
+### OAuth Flow ✅
+- [x] `app/api/threads/auth/route.ts` - Initiate Meta OAuth
+- [x] `app/api/threads/callback/route.ts` - Exchange code for tokens
+- [x] Store in `social_accounts` table
+- [x] `app/dashboard/settings/connections/page.tsx` - Manage connected accounts
 
 ### Publishing
 - [ ] `lib/threads/client.ts` - Threads API wrapper
@@ -306,7 +306,7 @@ NOTION_CLIENT_SECRET=
 | Image upload | ⏳ 0% | Week 3-4 |
 | Save to database | ⏳ 0% | Week 3-4 |
 | Post listing & editing | ⏳ 0% | Week 4 |
-| Threads OAuth | ⏳ 0% | Week 4 |
+| Threads OAuth | ✅ Done | Week 4 |
 | Threads publishing | ⏳ 0% | Week 4-5 |
 | Basic analytics | ⏳ 0% | Week 7 |
 | Engagement sync | ⏳ 0% | Week 7 |
@@ -342,9 +342,9 @@ Week 3: Manual Input (PRIORITY 1) 🔄 IN PROGRESS
 - Save posts to database
 - Post listing page
 
-Week 4: Threads Publishing (PRIORITY 1)
-- Meta Developer App setup
-- OAuth flow
+Week 4: Threads Publishing (PRIORITY 1) 🔄 IN PROGRESS
+- Meta Developer App setup ✅
+- OAuth flow ✅
 - Publishing API
 
 Week 5: GitHub Integration (OPTIONAL)
@@ -509,17 +509,17 @@ BUSINESS ($79/month):
 - [x] Build `app/api/posts/route.ts` (CRUD operations)
 - [x] Build `app/dashboard/posts/page.tsx` (post listing)
 - [x] Build `app/dashboard/posts/[id]/page.tsx` (edit post)
-- [ ] Set Up Meta Developer Account for Threads
+- [x] Set Up Meta Developer Account for Threads
 
 ### Next Week (Week 4):
-- [ ] Build Threads OAuth flow
-- [ ] Build `lib/threads/client.ts`
+- [x] Build Threads OAuth flow
+- [ ] Build `lib/threads/client.ts` (Publishing logic pending)
 - [ ] Build `app/api/posts/publish/route.ts`
 - [ ] Test end-to-end: Manual input → Generate → Publish
 
 ---
 
-*Last Updated: January 26, 2026*  
+*Last Updated: February 10, 2026*  
 *Project Start: January 20, 2026*  
 *Target MVP Launch: March 15, 2026 (8 weeks)*  
-*Current Week: Week 2*
+*Current Week: Week 4*

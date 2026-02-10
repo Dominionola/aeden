@@ -48,6 +48,10 @@
 - **Linting:** ESLint
 - **Formatting:** Prettier (recommended)
 - **Deployment:** Vercel
+- **Testing:**
+  - **Unit/Integration:** Vitest
+  - **Component Testing:** React Testing Library (`@testing-library/react`)
+
 
 ## 7. Installation Manifest (Copy-Paste)
 

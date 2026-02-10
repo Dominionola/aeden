@@ -393,22 +393,63 @@ console.error("Generation failed", {
 
 ---
 
+
 ## Testing Strategy
 
+> **See `/testing-workflow` for detailed guidelines on when and how to run tests.**
+
+### Test Organization
+```
+components/
+  ui/
+    __tests__/
+      button.test.tsx
+  dashboard/
+    __tests__/
+      post-card.test.tsx
+app/
+  api/
+    generate/
+      __tests__/
+        route.test.ts
+lib/
+  ai/
+    __tests__/
+      prompts.test.ts
+```
+
 ### Unit Tests
-- AI prompt generation
-- Utility functions
+**Tools**: Vitest + React Testing Library  
+**Run**: `npm run test` (watch mode) or `npx vitest run` (single run)
+
+- AI prompt generation (`lib/ai/prompts.ts`)
+- Utility functions (`lib/utils.ts`)
 - Type validations
+- Component rendering and props handling
 
 ### Integration Tests
-- API route handlers
-- Supabase queries
-- External API mocking
+**Focus**: API routes and database interactions
+
+- API route handlers (`app/api/**/route.ts`)
+- Supabase queries (with mocked connections)
+- External API mocking (Threads, GitHub, Notion)
+- Authentication flows
 
 ### E2E Tests
-- Auth flow
-- Post creation → Publishing
+**Tools**: Playwright (future implementation)  
+**Focus**: Critical user journeys
+
+- Auth flow (sign up, login, logout)
+- Post creation → Publishing to Threads
 - GitHub sync workflow
+- Persona training flow
+
+### Testing Workflow
+1. **During Development**: Run `npm run test` in watch mode
+2. **Before Commit**: Run `npx vitest run` to verify all tests pass
+3. **Pre-deployment**: Full test suite + build verification
+4. **CI/CD**: Automated testing on every push/PR
+
 
 ---
 

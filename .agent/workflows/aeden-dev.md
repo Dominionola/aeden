@@ -123,6 +123,7 @@ Append to [gemini.md](file:///c:/Users/Olatheruler/Nova/gemini.md):
 ```bash
 npm run build    # Check for TypeScript errors
 npm run lint     # Check code quality
+npx vitest run   # Run all tests
 ```
 
 ---
@@ -157,3 +158,4 @@ Use this workflow when:
 - `/design-review` - Review UI against best practices
 - `/react-best-practices` - Apply React performance patterns
 - `/supabase-best-practices` - Database optimization
+- `/testing-workflow` - Testing strategy and when to run tests
