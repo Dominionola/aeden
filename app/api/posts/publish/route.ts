@@ -87,10 +87,9 @@ export async function POST(request: NextRequest) {
                 const refreshedToken = await threadsClient.refreshToken(accessToken);
                 accessToken = refreshedToken.access_token;
 
-                // Update token in database
-                const newExpiresAt = new Date(
-                    Date.now() + (refreshedToken.expires_in || 60 * 24 * 60 * 60) * 1000
-                );
+                // Update token in database (60 days for long-lived tokens)
+                const newExpiresAt = new Date();
+                newExpiresAt.setDate(newExpiresAt.getDate() + 60);
 
                 const { error: tokenUpdateError } = await supabase
                     .from("social_accounts")
