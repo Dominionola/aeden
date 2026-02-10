@@ -34,10 +34,27 @@ export async function GET(request: NextRequest) {
 
         // 2. Exchange Code for Token
         const tokenData = await threadsClient.exchangeCodeForToken(code);
-        const accessToken = tokenData.access_token;
+        let accessToken = tokenData.access_token;
         const threadsUserId = tokenData.user_id;
 
-        // 3. Get User Details (for handle/profile pic)
+        // 3. Exchange for long-lived token (60 days validity)
+        let tokenExpiresAt: string | null = null;
+        try {
+            const longLivedToken = await threadsClient.exchangeForLongLivedToken(accessToken);
+            accessToken = longLivedToken.access_token;
+
+            // Calculate expiration (60 days from now)
+            const expirationDate = new Date();
+            expirationDate.setDate(expirationDate.getDate() + 60);
+            tokenExpiresAt = expirationDate.toISOString();
+
+            console.log("✅ Exchanged for long-lived token, expires:", tokenExpiresAt);
+        } catch (exchangeError) {
+            console.warn("⚠️ Failed to exchange for long-lived token, using short-lived:", exchangeError);
+            // Still proceed with short-lived token
+        }
+
+        // 4. Get User Details (for handle/profile pic)
         let threadsUser;
         try {
             threadsUser = await threadsClient.getUser(threadsUserId, accessToken);
@@ -47,13 +64,14 @@ export async function GET(request: NextRequest) {
             threadsUser = { id: threadsUserId, username: "Unknown" };
         }
 
-        // 4. Save to Database
+        // 5. Save to Database
         const { error: dbError } = await supabase
             .from("social_accounts")
             .upsert({
                 user_id: user.id,
                 platform: "threads",
                 access_token: accessToken,
+                token_expires_at: tokenExpiresAt,
                 account_id: threadsUserId,
                 account_handle: threadsUser.username,
                 profile_picture_url: threadsUser.threads_profile_picture_url,

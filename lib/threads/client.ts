@@ -71,12 +71,53 @@ export class ThreadsClient {
 
         const data = await response.json();
 
-        // Threads API currently returns a short-lived token here if I recall correctly, 
-        // or a long-lived one directly? Docs say "Exchange the code for a short-lived user access token".
-        // We might need to swap for long-lived later, but for MVP let's assume valid.
-        // Actually, for Threads specifically, the doc says "Exchange the code for a user access token".
-        // Let's adhere to the standard flow.
+        // The initial token is short-lived (60 days for Threads)
+        // We should exchange it for a long-lived token immediately
+        return data as ThreadsTokenResponse;
+    }
 
+    /**
+     * Exchange short-lived token for long-lived token (60 days)
+     */
+    async exchangeForLongLivedToken(accessToken: string): Promise<ThreadsTokenResponse> {
+        const url = "https://graph.threads.net/access_token";
+        const params = new URLSearchParams();
+        params.append("grant_type", "th_exchange_token");
+        params.append("client_secret", this.appSecret);
+        params.append("access_token", accessToken);
+
+        const response = await fetch(`${url}?${params.toString()}`, {
+            method: "GET"
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to exchange for long-lived token: ${JSON.stringify(error)}`);
+        }
+
+        const data = await response.json();
+        return data as ThreadsTokenResponse;
+    }
+
+    /**
+     * Refresh a long-lived token (extends expiration by another 60 days)
+     */
+    async refreshToken(accessToken: string): Promise<ThreadsTokenResponse> {
+        const url = "https://graph.threads.net/refresh_access_token";
+        const params = new URLSearchParams();
+        params.append("grant_type", "th_refresh_token");
+        params.append("access_token", accessToken);
+
+        const response = await fetch(`${url}?${params.toString()}`, {
+            method: "GET"
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Failed to refresh token: ${JSON.stringify(error)}`);
+        }
+
+        const data = await response.json();
         return data as ThreadsTokenResponse;
     }
 

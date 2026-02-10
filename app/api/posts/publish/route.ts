@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         // 3. Get Threads Token
         const { data: account, error: tokenError } = await supabase
             .from("social_accounts")
-            .select("access_token, account_id")
+            .select("access_token, account_id, token_expires_at")
             .eq("user_id", user.id)
             .eq("platform", "threads")
             .eq("is_active", true)
@@ -60,6 +60,58 @@ export async function POST(request: NextRequest) {
                 { error: "Threads account not connected" },
                 { status: 403 }
             );
+        }
+
+        // 3a. Check if token is expired or will expire soon (within 7 days)
+        let accessToken = account.access_token;
+        const expiresAt = account.token_expires_at ? new Date(account.token_expires_at) : null;
+        const now = new Date();
+        const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        if (expiresAt && expiresAt < sevenDaysFromNow) {
+            if (expiresAt < now) {
+                // Token is expired - user needs to reconnect
+                console.error("❌ Token expired at:", expiresAt.toISOString());
+                return NextResponse.json(
+                    {
+                        error: "Threads token expired",
+                        message: "Please reconnect your Threads account in Settings → Connections"
+                    },
+                    { status: 403 }
+                );
+            }
+
+            // Token expires soon - try to refresh it automatically
+            console.log("⚠️ Token expires soon, refreshing...");
+            try {
+                const refreshedToken = await threadsClient.refreshToken(accessToken);
+                accessToken = refreshedToken.access_token;
+
+                // Update token in database
+                const newExpiresAt = new Date();
+                newExpiresAt.setDate(newExpiresAt.getDate() + 60);
+
+                await supabase
+                    .from("social_accounts")
+                    .update({
+                        access_token: accessToken,
+                        token_expires_at: newExpiresAt.toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq("user_id", user.id)
+                    .eq("platform", "threads");
+
+                console.log("✅ Token refreshed successfully");
+            } catch (refreshError: any) {
+                console.error("❌ Failed to refresh token:", refreshError.message);
+                return NextResponse.json(
+                    {
+                        error: "Token refresh failed",
+                        message: "Please reconnect your Threads account in Settings → Connections"
+                    },
+                    { status: 403 }
+                );
+            }
         }
 
         // 4. Publish to Threads
@@ -75,7 +127,7 @@ export async function POST(request: NextRequest) {
 
             publishId = await threadsClient.publishPost(
                 account.account_id,
-                account.access_token,
+                accessToken, // Use the potentially refreshed token
                 post.content,
                 post.image_url
             );
@@ -107,15 +159,15 @@ export async function POST(request: NextRequest) {
         }
         // 5. Update Post Status
         // 5. Update Post Status
-        const now = new Date().toISOString();
+        const updateTimestamp = new Date().toISOString();
         const { error: updateError } = await supabase
             .from("posts")
             .update({
                 status: "published",
                 platform: "threads",
                 platform_post_id: publishId,
-                published_at: now,
-                updated_at: now
+                published_at: updateTimestamp,
+                updated_at: updateTimestamp
             })
             .eq("id", postId);
 
