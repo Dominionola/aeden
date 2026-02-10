@@ -30,8 +30,7 @@
 | **Manual Input (KILLER FEATURE)** | 🔄 In Progress | 70% | P0 |
 | **Image Upload** | ⏳ Not Started | 0% | P0 |
 | **Save to Database** | ⏳ Not Started | 0% | P0 |
-| **Threads Publishing** | 🔄 In Progress | 20% | P0 |
-| **Post Listing** | ⏳ Not Started | 0% | P0 |
+| **Threads Publishing** | 🔄 In Progress | 60% | P0 || **Post Listing** | ⏳ Not Started | 0% | P0 |
 | **Basic Analytics** | ⏳ Not Started | 0% | P0 |
 | **GitHub Integration** | ⏳ Not Started | 0% | P1 |
 | **Notion Integration** | ⏳ Not Started | 0% | P1 |

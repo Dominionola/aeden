@@ -65,19 +65,43 @@ export async function POST(request: NextRequest) {
         // 4. Publish to Threads
         let publishId: string;
         try {
-            // Note: If you have an image_url in your post, you can pass it here
-            // const imageUrl = post.image_url; 
-            // For MVP Phase 4, we focus on text, but I'll hook it up if it exists in the implementation plan
+            console.log("📤 Publishing to Threads:", {
+                userId: account.account_id?.substring(0, 10) + "...",
+                hasToken: !!account.access_token,
+                tokenLength: account.access_token?.length,
+                contentLength: post.content?.length,
+                hasImage: !!post.image_url
+            });
+
             publishId = await threadsClient.publishPost(
                 account.account_id,
                 account.access_token,
                 post.content,
                 post.image_url
             );
+
+            console.log("✅ Successfully published to Threads:", publishId);
         } catch (apiError: any) {
-            console.error("Threads API Error:", apiError);
+            console.error("❌ Threads API Error Details:", {
+                message: apiError.message,
+                stack: apiError.stack,
+                response: apiError.response,
+                cause: apiError.cause,
+                userId: account.account_id,
+                hasToken: !!account.access_token,
+                contentPreview: post.content?.substring(0, 50) + "..."
+            });
+
+            // Return more detailed error to help debug
             return NextResponse.json(
-                { error: "Failed to publish to Threads" },
+                {
+                    error: "Failed to publish to Threads",
+                    details: apiError.message || "Unknown error",
+                    debug: process.env.NODE_ENV === "development" ? {
+                        userId: account.account_id,
+                        hasToken: !!account.access_token
+                    } : undefined
+                },
                 { status: 502 }
             );
         }

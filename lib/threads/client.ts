@@ -150,6 +150,11 @@ export class ThreadsClient {
         params.append("creation_id", creationId);
         params.append("access_token", accessToken);
 
+        console.log("🚀 Publishing media container:", {
+            endpoint: url,
+            creationId: creationId?.substring(0, 20) + "..."
+        });
+
         const response = await fetch(url.toString(), {
             method: "POST",
             headers: {
@@ -159,16 +164,25 @@ export class ThreadsClient {
         });
 
         if (!response.ok) {
-            let errorMessage: string;
+            let errorDetails: any;
             try {
-                const error = await response.json() as ThreadsError;
-                errorMessage = error.error?.message ?? JSON.stringify(error);
+                errorDetails = await response.json();
             } catch {
-                errorMessage = response.statusText;
+                errorDetails = { message: response.statusText };
             }
-            throw new Error(`Failed to publish container: ${errorMessage}`);
+
+            console.error("❌ Publish failed:", {
+                status: response.status,
+                statusText: response.statusText,
+                error: errorDetails
+            });
+
+            const error = errorDetails as ThreadsError;
+            throw new Error(`Failed to publish container: ${error.error?.message || response.statusText}`);
         }
+
         const data = await response.json() as ThreadsPublishResponse;
+        console.log("✅ Published successfully:", data.id);
         return data.id;
     }
 }
