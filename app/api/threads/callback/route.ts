@@ -59,9 +59,15 @@ export async function GET(request: NextRequest) {
         // 4. Get User Details (for handle/profile pic)
         let threadsUser;
         try {
+            console.log("📞 Fetching user details for:", threadsUserId);
             threadsUser = await threadsClient.getUser(threadsUserId, accessToken);
-        } catch (e) {
-            console.error("Failed to fetch user details", e);
+            console.log("✅ User details fetched:", threadsUser);
+        } catch (e: any) {
+            console.error("❌ Failed to fetch user details:", {
+                error: e.message,
+                userId: threadsUserId,
+                hasToken: !!accessToken
+            });
             // Fallback if profile fetch fails, we still have the ID
             threadsUser = { id: threadsUserId, username: "Unknown" };
         }

@@ -133,13 +133,29 @@ export class ThreadsClient {
     async getUser(userId: string, accessToken: string): Promise<ThreadsUser> {
         const url = `${THREADS_API_BASE}/${userId}?fields=id,username,threads_profile_picture_url,threads_biography&access_token=${accessToken}`;
 
+        console.log("🔍 Fetching Threads user profile:", { userId, url: url.replace(accessToken, "[REDACTED]") });
+
         const response = await fetch(url);
 
         if (!response.ok) {
-            throw new Error("Failed to fetch user profile");
+            let errorMessage: string;
+            try {
+                const error = await response.json();
+                errorMessage = JSON.stringify(error);
+            } catch {
+                errorMessage = response.statusText;
+            }
+            console.error("❌ Threads getUser API error:", {
+                status: response.status,
+                error: errorMessage,
+                userId
+            });
+            throw new Error(`Failed to fetch user profile: ${errorMessage}`);
         }
 
-        return await response.json();
+        const userData = await response.json();
+        console.log("✅ Threads user data received:", userData);
+        return userData;
     }
 
     /**
