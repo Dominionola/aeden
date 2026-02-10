@@ -20,13 +20,19 @@ export default async function ConnectionsPage({
     }
 
     // Check Threads Connection
-    const { data: threadsAccount } = await supabase
+    const { data: threadsAccount, error: fetchError } = await supabase
         .from("social_accounts")
         .select("*")
         .eq("user_id", user.id)
         .eq("platform", "threads")
         .eq("is_active", true)
         .single();
+
+    console.log("🔍 Connections Page - User ID:", user.id);
+    console.log("🔍 Connections Page - Threads Account:", threadsAccount);
+    if (fetchError) {
+        console.error("🔍 Connections Page - Fetch Error:", fetchError);
+    }
 
     return (
         <div className="max-w-2xl mx-auto py-8">

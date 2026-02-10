@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
         if (dbError) {
             console.error("Database save error:", dbError);
             throw new Error("Failed to save connection to database");
+        } else {
+            console.log("✅ Successfully saved Threads connection for user:", user.id);
         }
 
         // 5. Redirect back
