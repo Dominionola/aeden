@@ -24,10 +24,6 @@ export class ThreadsClient {
      * Generate the OAuth Authorization URL
      */
     getAuthUrl(state?: string): string {
-        console.log("🔍 Getting Auth URL");
-        console.log("🔍 App ID:", this.appId);
-        console.log("🔍 Redirect URI:", this.redirectUri);
-
         const scopes = [
             "threads_basic",
             "threads_content_publish"
@@ -42,7 +38,6 @@ export class ThreadsClient {
             url.searchParams.append("state", state);
         }
 
-        console.log("🔍 Generated URL:", url.toString());
         return url.toString();
     }
 
