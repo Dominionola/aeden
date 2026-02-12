@@ -148,15 +148,19 @@ export async function POST(request: NextRequest) {
                 contentPreview: post.content?.substring(0, 50) + "..."
             });
 
+            // Extract the actual API error message for better user feedback
+            const errorMessage = apiError.message || "Unknown error occurred";
+
             // Return more detailed error to help debug
             return NextResponse.json(
                 {
-                    error: "Failed to publish to Threads",
+                    error: errorMessage.includes("Failed to")
+                        ? errorMessage
+                        : `Failed to publish to Threads: ${errorMessage}`,
                     details: apiError.message || "Unknown error",
-                    debug: process.env.NODE_ENV === "development" ? {
-                        userId: account.account_id,
-                        hasToken: !!account.access_token
-                    } : undefined
+                    suggestion: errorMessage.includes("token") || errorMessage.includes("auth")
+                        ? "Try disconnecting and reconnecting your Threads account"
+                        : "Please check your post content and try again"
                 },
                 { status: 502 }
             );
