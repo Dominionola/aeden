@@ -72,6 +72,10 @@ export async function GET(request: NextRequest) {
             threadsUser = { id: threadsUserId, username: "Unknown" };
         }
 
+        // IMPORTANT: Use the ID from the /me response, not from token exchange!
+        // The /me endpoint returns the correct user ID for API operations
+        const correctUserId = threadsUser.id;
+
         // 5. Save to Database
         const { error: dbError } = await supabase
             .from("social_accounts")
@@ -80,7 +84,7 @@ export async function GET(request: NextRequest) {
                 platform: "threads",
                 access_token: accessToken,
                 token_expires_at: tokenExpiresAt,
-                account_id: threadsUserId,
+                account_id: correctUserId, // Use ID from /me response!
                 account_handle: threadsUser.username,
                 profile_picture_url: threadsUser.threads_profile_picture_url,
                 is_active: true,
