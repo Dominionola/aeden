@@ -129,11 +129,13 @@ export class ThreadsClient {
 
     /**
      * Get User Profile
+     * Using 'me' endpoint is more reliable with fresh tokens
      */
     async getUser(userId: string, accessToken: string): Promise<ThreadsUser> {
-        const url = `${THREADS_API_BASE}/${userId}?fields=id,username,threads_profile_picture_url,threads_biography&access_token=${accessToken}`;
+        // Use 'me' endpoint instead of userId - works better with OAuth tokens
+        const url = `${THREADS_API_BASE}/me?fields=id,username,threads_profile_picture_url,threads_biography&access_token=${accessToken}`;
 
-        console.log("🔍 Fetching Threads user profile:", { userId, url: url.replace(accessToken, "[REDACTED]") });
+        console.log("🔍 Fetching Threads user profile:", { userId, endpoint: "me", urlPreview: url.replace(accessToken, "[REDACTED]") });
 
         const response = await fetch(url);
 
