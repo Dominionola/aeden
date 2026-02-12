@@ -177,7 +177,8 @@ export class ThreadsClient {
      * Step 1: Create a Media Container (Ready for publishing)
      */
     private async createMediaContainer(userId: string, accessToken: string, text: string, imageUrl?: string): Promise<string> {
-        const url = `${THREADS_API_BASE}/${userId}/threads`;
+        // Use 'me' endpoint - more reliable with OAuth tokens
+        const url = `${THREADS_API_BASE}/me/threads`;
         const params = new URLSearchParams();
 
         params.append("media_type", imageUrl ? "IMAGE" : "TEXT");
@@ -209,7 +210,8 @@ export class ThreadsClient {
      * Step 2: Publish the Container
      */
     private async publishMediaContainer(userId: string, accessToken: string, creationId: string): Promise<string> {
-        const url = `${THREADS_API_BASE}/${userId}/threads_publish`;
+        // Use 'me' endpoint - more reliable with OAuth tokens
+        const url = `${THREADS_API_BASE}/me/threads_publish`;
         const params = new URLSearchParams();
 
         params.append("creation_id", creationId);
