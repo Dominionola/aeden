@@ -167,6 +167,14 @@ export class ThreadsClient {
         // Step 1: Create Media Container
         const containerId = await this.createMediaContainer(userId, accessToken, text, imageUrl);
 
+        console.log("⏳ Waiting 30 seconds for Threads to process the container...");
+
+        // Step 1.5: Wait for Meta to process the container
+        // Threads API requires 30 seconds for processing
+        await new Promise(resolve => setTimeout(resolve, 30000));
+
+        console.log("✅ Wait complete, publishing now...");
+
         // Step 2: Publish Media Container
         const publishId = await this.publishMediaContainer(userId, accessToken, containerId);
 
