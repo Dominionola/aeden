@@ -26,7 +26,8 @@ export class ThreadsClient {
     getAuthUrl(state?: string): string {
         const scopes = [
             "threads_basic",
-            "threads_content_publish"
+            "threads_content_publish",
+            "threads_manage_insights"
         ].join(",");
 
         const url = new URL("https://threads.net/oauth/authorize");

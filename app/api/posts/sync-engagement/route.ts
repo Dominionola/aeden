@@ -7,29 +7,39 @@ async function fetchPostInsights(
     platformPostId: string,
     accessToken: string
 ): Promise<{ likes: number; replies: number; views: number; quotes: number; reposts: number }> {
-    const fields = "likes,replies,views,quotes,reposts";
-    const url = `${THREADS_API_BASE}/${platformPostId}/insights?metric=${fields}&access_token=${accessToken}`;
+    // Threads Insights API — requires threads_manage_insights scope
+    const url = `${THREADS_API_BASE}/${platformPostId}/insights?metric=likes,replies,views,quotes,reposts&access_token=${accessToken}`;
+
+    console.log(`📊 Fetching insights for post: ${platformPostId.substring(0, 15)}...`);
 
     const response = await fetch(url);
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Threads insights API error: ${JSON.stringify(error)}`);
-    }
-
     const data = await response.json();
 
-    // Parse the insights response — Threads returns an array of metric objects
+    if (!response.ok) {
+        console.error("❌ Threads insights API error:", JSON.stringify(data));
+        throw new Error(data?.error?.message || `HTTP ${response.status}: ${JSON.stringify(data)}`);
+    }
+
+    console.log("📊 Raw insights response:", JSON.stringify(data));
+
+    // Threads returns an array: each item has { name, period, title, total_value: { value } }
     const metrics: Record<string, number> = {};
     if (data.data && Array.isArray(data.data)) {
         for (const item of data.data) {
-            if (item.name && item.values?.[0]?.value !== undefined) {
-                metrics[item.name] = item.values[0].value;
-            } else if (item.name && item.total_value?.value !== undefined) {
-                metrics[item.name] = item.total_value.value;
+            // Try total_value first (lifetime metrics), then values array
+            if (item.name !== undefined) {
+                if (item.total_value?.value !== undefined) {
+                    metrics[item.name] = Number(item.total_value.value);
+                } else if (Array.isArray(item.values) && item.values[0]?.value !== undefined) {
+                    metrics[item.name] = Number(item.values[0].value);
+                } else if (typeof item.value === "number") {
+                    metrics[item.name] = item.value;
+                }
             }
         }
     }
+
+    console.log("📊 Parsed metrics:", metrics);
 
     return {
         likes: metrics.likes ?? 0,
@@ -39,6 +49,7 @@ async function fetchPostInsights(
         reposts: metrics.reposts ?? 0,
     };
 }
+
 
 export async function POST(request: NextRequest) {
     try {
