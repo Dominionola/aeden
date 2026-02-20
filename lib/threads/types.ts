@@ -3,6 +3,7 @@ export interface ThreadsUser {
     username: string;
     threads_profile_picture_url?: string;
     threads_biography?: string;
+    followers_count?: number;
 }
 
 export interface ThreadsMediaContainerResponse {

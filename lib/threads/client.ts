@@ -134,7 +134,7 @@ export class ThreadsClient {
      */
     async getUser(userId: string, accessToken: string): Promise<ThreadsUser> {
         // Use 'me' endpoint instead of userId - works better with OAuth tokens
-        const url = `${THREADS_API_BASE}/me?fields=id,username,threads_profile_picture_url,threads_biography&access_token=${accessToken}`;
+        const url = `${THREADS_API_BASE}/me?fields=id,username,threads_profile_picture_url,threads_biography,followers_count&access_token=${accessToken}`;
 
         console.log("🔍 Fetching Threads user profile:", { userId, endpoint: "me", urlPreview: url.replace(accessToken, "[REDACTED]") });
 
