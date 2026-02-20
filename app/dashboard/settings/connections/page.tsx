@@ -10,7 +10,8 @@ export default async function ConnectionsPage({
 }) {
     const params = await searchParams;
     const success = params.success;
-    const error = params.error;
+    const error = params.error as string | undefined;
+    const detail = params.detail as string | undefined;
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -57,13 +58,22 @@ export default async function ConnectionsPage({
             {error && (
                 <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-                    <div>
+                    <div className="min-w-0">
                         <h3 className="font-medium text-red-900">Connection Failed</h3>
-                        <p className="text-sm text-red-700">
-                            {error === "threads_connection_failed"
-                                ? "We couldn't connect to your Threads account. Please try again."
-                                : "An error occurred while connecting your account."}
+                        <p className="text-sm text-red-700 mt-0.5">
+                            {error === "misconfigured_redirect_uri"
+                                ? "The Threads redirect URI is not configured on Vercel. Add NEXT_PUBLIC_THREADS_REDIRECT_URI to your Vercel environment variables."
+                                : error === "token_exchange_failed"
+                                    ? "Failed to exchange the authorization code. Try connecting again."
+                                    : error === "database_error"
+                                        ? "Your account was authorized but we couldn't save it. Try again."
+                                        : error === "access_denied"
+                                            ? "You cancelled the Threads authorization. No changes were made."
+                                            : "Something went wrong. Check the detail below and try again."}
                         </p>
+                        {detail && (
+                            <p className="text-xs text-red-500 mt-1 font-mono break-all">{detail}</p>
+                        )}
                     </div>
                 </div>
             )}

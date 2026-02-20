@@ -2,23 +2,37 @@ import { threadsClient } from "@/lib/threads/client";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+function errorRedirect(request: NextRequest, message: string, detail?: string) {
+    const url = new URL("/dashboard/settings/connections", request.url);
+    url.searchParams.set("error", message);
+    if (detail) url.searchParams.set("detail", detail.slice(0, 200));
+    return NextResponse.redirect(url);
+}
+
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get("code");
-    const state = searchParams.get("state"); // This is our 'origin' path
+    const state = searchParams.get("state");
     const error = searchParams.get("error");
     const errorReason = searchParams.get("error_reason");
 
+    // User cancelled or Threads returned an error
     if (error) {
-        return NextResponse.redirect(
-            new URL(`/dashboard?error=${error}&reason=${errorReason}`, request.url)
-        );
+        console.error("❌ Threads OAuth error:", { error, errorReason });
+        return errorRedirect(request, error, errorReason ?? undefined);
     }
 
     if (!code) {
-        return NextResponse.redirect(
-            new URL("/dashboard?error=missing_code", request.url)
-        );
+        console.error("❌ No code in callback");
+        return errorRedirect(request, "missing_code");
+    }
+
+    // Validate env vars early — give a clear error if missing
+    const redirectUri = process.env.NEXT_PUBLIC_THREADS_REDIRECT_URI;
+    if (!redirectUri || redirectUri.includes("YOUR-NGROK-URL") || redirectUri.includes("localhost")) {
+        const envError = `NEXT_PUBLIC_THREADS_REDIRECT_URI is not configured for production. Current value: "${redirectUri}"`;
+        console.error("❌ Env config error:", envError);
+        return errorRedirect(request, "misconfigured_redirect_uri", envError);
     }
 
     try {
@@ -27,56 +41,64 @@ export async function GET(request: NextRequest) {
         // 1. Verify User Session
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
-            return NextResponse.redirect(
-                new URL("/login?error=unauthorized", request.url)
-            );
+            console.error("❌ Auth error in callback:", authError?.message);
+            return NextResponse.redirect(new URL("/login?error=unauthorized", request.url));
         }
 
-        // 2. Exchange Code for Token
-        const tokenData = await threadsClient.exchangeCodeForToken(code);
-        let accessToken = tokenData.access_token;
-        const threadsUserId = tokenData.user_id;
+        // 2. Exchange Code for short-lived Token
+        console.log("🔄 Step 1: Exchanging code for token...");
+        let accessToken: string;
+        let threadsUserId: string;
+        try {
+            const tokenData = await threadsClient.exchangeCodeForToken(code);
+            accessToken = tokenData.access_token;
+            threadsUserId = tokenData.user_id;
+            console.log("✅ Got short-lived token for user:", threadsUserId);
+        } catch (err: any) {
+            console.error("❌ Token exchange failed:", err.message);
+            return errorRedirect(request, "token_exchange_failed", err.message);
+        }
 
-        // 3. Exchange for long-lived token (60 days validity)
-        let tokenExpiresAt: string | null = null;
+        // 3. Exchange for long-lived token (60 days)
+        console.log("🔄 Step 2: Exchanging for long-lived token...");
+        let tokenExpiresAt: string;
         try {
             const longLivedToken = await threadsClient.exchangeForLongLivedToken(accessToken);
             accessToken = longLivedToken.access_token;
-
-            // Calculate expiration (60 days from now)
-            const expirationDate = new Date();
-            expirationDate.setDate(expirationDate.getDate() + 60);
-            tokenExpiresAt = expirationDate.toISOString();
-
-            console.log("✅ Exchanged for long-lived token, expires:", tokenExpiresAt);
-        } catch (exchangeError) {
-            console.warn("⚠️ Failed to exchange for long-lived token, using short-lived:", exchangeError);
-            // Short-lived tokens expire in ~1 hour
-            const shortLivedExpiration = new Date();
-            shortLivedExpiration.setHours(shortLivedExpiration.getHours() + 1);
-            tokenExpiresAt = shortLivedExpiration.toISOString();
+            const exp = new Date();
+            exp.setDate(exp.getDate() + 60);
+            tokenExpiresAt = exp.toISOString();
+            console.log("✅ Long-lived token obtained, expires:", tokenExpiresAt);
+        } catch (err: any) {
+            console.warn("⚠️ Long-lived token exchange failed, using short-lived:", err.message);
+            const exp = new Date();
+            exp.setHours(exp.getHours() + 1);
+            tokenExpiresAt = exp.toISOString();
         }
-        // 4. Get User Details (for handle/profile pic)
-        let threadsUser;
+
+        // 4. Fetch user profile from /me
+        console.log("🔄 Step 3: Fetching user profile...");
+        let threadsUser: {
+            id: string;
+            username: string;
+            threads_profile_picture_url?: string;
+            threads_biography?: string;
+            followers_count?: number;
+        };
         try {
-            console.log("📞 Fetching user details for:", threadsUserId);
             threadsUser = await threadsClient.getUser(threadsUserId, accessToken);
-            console.log("✅ User details fetched:", threadsUser);
-        } catch (e: any) {
-            console.error("❌ Failed to fetch user details:", {
-                error: e.message,
-                userId: threadsUserId,
-                hasToken: !!accessToken
+            console.log("✅ Profile fetched:", {
+                id: threadsUser.id,
+                username: threadsUser.username,
+                followers: threadsUser.followers_count,
             });
-            // Fallback if profile fetch fails, we still have the ID
-            threadsUser = { id: threadsUserId, username: "Unknown" };
+        } catch (err: any) {
+            console.warn("⚠️ Profile fetch failed, using fallback:", err.message);
+            threadsUser = { id: threadsUserId, username: "unknown" };
         }
 
-        // IMPORTANT: Use the ID from the /me response, not from token exchange!
-        // The /me endpoint returns the correct user ID for API operations
-        const correctUserId = threadsUser.id;
-
-        // 5. Save to Database
+        // 5. Upsert to DB
+        console.log("🔄 Step 4: Saving to database...");
         const { error: dbError } = await supabase
             .from("social_accounts")
             .upsert({
@@ -84,34 +106,35 @@ export async function GET(request: NextRequest) {
                 platform: "threads",
                 access_token: accessToken,
                 token_expires_at: tokenExpiresAt,
-                account_id: correctUserId, // Use ID from /me response!
+                account_id: threadsUser.id,
                 account_handle: threadsUser.username,
                 profile_picture_url: threadsUser.threads_profile_picture_url ?? null,
                 biography: threadsUser.threads_biography ?? null,
                 followers_count: threadsUser.followers_count ?? 0,
                 is_active: true,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
             }, {
-                onConflict: "user_id, platform"
+                onConflict: "user_id, platform",
             });
 
         if (dbError) {
-            console.error("Database save error:", dbError);
-            throw new Error("Failed to save connection to database");
-        } else {
-            console.log("✅ Successfully saved Threads connection for user:", user.id);
+            console.error("❌ Database upsert failed:", dbError);
+            return errorRedirect(request, "database_error", dbError.message);
         }
 
-        // 5. Redirect back
-        const redirectPath = state || "/dashboard";
+        console.log("✅ Threads connection saved for user:", user.id);
+
+        // 6. Redirect to connections page with success
+        const redirectPath = state || "/dashboard/settings/connections";
         return NextResponse.redirect(
             new URL(`${redirectPath}?success=threads_connected`, request.url)
         );
 
-    } catch (error) {
-        console.error("Threads Callback Error:", error);
-        return NextResponse.redirect(
-            new URL("/dashboard?error=threads_connection_failed", request.url)
-        );
+    } catch (error: any) {
+        console.error("❌ Unexpected Threads callback error:", {
+            message: error?.message,
+            stack: error?.stack,
+        });
+        return errorRedirect(request, "unexpected_error", error?.message);
     }
 }
