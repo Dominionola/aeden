@@ -134,26 +134,38 @@ export class ThreadsClient {
      */
     async getUser(userId: string, accessToken: string): Promise<ThreadsUser> {
         // Use 'me' endpoint instead of userId - works better with OAuth tokens
-        const url = `${THREADS_API_BASE}/me?fields=id,username,threads_profile_picture_url,threads_biography,followers_count&access_token=${accessToken}`;
+        // Note: followers_count requires app review approval — excluded here
+        const url = `${THREADS_API_BASE}/me?fields=id,username,threads_profile_picture_url,threads_biography&access_token=${accessToken}`;
 
         console.log("🔍 Fetching Threads user profile:", { userId, endpoint: "me", urlPreview: url.replace(accessToken, "[REDACTED]") });
 
         const response = await fetch(url);
 
         if (!response.ok) {
-            let errorMessage: string;
-            try {
-                const error = await response.json();
-                errorMessage = JSON.stringify(error);
-            } catch {
-                errorMessage = response.statusText;
+            // Try minimal fields as fallback (in case some fields aren't approved)
+            console.warn("⚠️ Full profile fetch failed, trying minimal fields...");
+            const minimalUrl = `${THREADS_API_BASE}/me?fields=id,username&access_token=${accessToken}`;
+            const minimalResponse = await fetch(minimalUrl);
+
+            if (!minimalResponse.ok) {
+                let errorMessage: string;
+                try {
+                    const error = await minimalResponse.json();
+                    errorMessage = JSON.stringify(error);
+                } catch {
+                    errorMessage = minimalResponse.statusText;
+                }
+                console.error("❌ Threads getUser API error:", {
+                    status: minimalResponse.status,
+                    error: errorMessage,
+                    userId
+                });
+                throw new Error(`Failed to fetch user profile: ${errorMessage}`);
             }
-            console.error("❌ Threads getUser API error:", {
-                status: response.status,
-                error: errorMessage,
-                userId
-            });
-            throw new Error(`Failed to fetch user profile: ${errorMessage}`);
+
+            const minimalData = await minimalResponse.json();
+            console.log("✅ Minimal Threads user data received:", minimalData);
+            return minimalData;
         }
 
         const userData = await response.json();

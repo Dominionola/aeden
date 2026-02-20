@@ -110,7 +110,6 @@ export async function GET(request: NextRequest) {
                 account_handle: threadsUser.username,
                 profile_picture_url: threadsUser.threads_profile_picture_url ?? null,
                 biography: threadsUser.threads_biography ?? null,
-                followers_count: threadsUser.followers_count ?? 0,
                 is_active: true,
                 updated_at: new Date().toISOString(),
             }, {
