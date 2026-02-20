@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 
 interface SyncButtonProps {
@@ -11,35 +11,52 @@ interface SyncButtonProps {
 
 export default function AnalyticsSyncButton({ hasPublishedPosts }: SyncButtonProps) {
     const [isSyncing, setIsSyncing] = useState(false);
+    const [step, setStep] = useState<string>("");
 
     const handleSync = async () => {
-        if (!hasPublishedPosts) {
-            toast.info("No published posts to sync yet.");
-            return;
-        }
-
         setIsSyncing(true);
+        setStep("Importing posts...");
+
         try {
-            const response = await fetch("/api/posts/sync-engagement", {
-                method: "POST",
-            });
+            // Step 1: Import all posts from Threads (including ones not made via Aeden)
+            const importRes = await fetch("/api/posts/sync-posts", { method: "POST" });
+            const importData = await importRes.json();
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Sync failed");
+            if (!importRes.ok) {
+                throw new Error(importData.error || "Failed to import posts");
             }
 
-            if (data.synced > 0) {
-                toast.success(`Synced ${data.synced} post${data.synced > 1 ? "s" : ""}`, {
-                    description: "Engagement data updated from Threads.",
+            if (importData.imported > 0) {
+                toast.success(`Imported ${importData.imported} new post${importData.imported > 1 ? "s" : ""} from Threads`, {
+                    description: "Now syncing engagement data...",
+                    icon: <Download className="h-4 w-4 text-blue-500" />,
+                });
+            }
+
+            // Step 2: Sync engagement for all posts
+            setStep("Syncing engagement...");
+            const syncRes = await fetch("/api/posts/sync-engagement", { method: "POST" });
+            const syncData = await syncRes.json();
+
+            if (!syncRes.ok) {
+                throw new Error(syncData.error || "Engagement sync failed");
+            }
+
+            // Summarise results
+            const parts: string[] = [];
+            if (importData.imported > 0) parts.push(`${importData.imported} posts imported`);
+            if (syncData.synced > 0) parts.push(`${syncData.synced} posts updated`);
+
+            if (parts.length > 0) {
+                toast.success("Sync complete", {
+                    description: parts.join(" · "),
                     icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
                 });
-                // Refresh the page to show updated data
                 window.location.reload();
             } else {
-                toast.info(data.message || "Nothing to sync.");
+                toast.info("Everything is already up to date.");
             }
+
         } catch (error: any) {
             toast.error("Sync failed", {
                 description: error.message,
@@ -47,6 +64,7 @@ export default function AnalyticsSyncButton({ hasPublishedPosts }: SyncButtonPro
             });
         } finally {
             setIsSyncing(false);
+            setStep("");
         }
     };
 
@@ -60,7 +78,7 @@ export default function AnalyticsSyncButton({ hasPublishedPosts }: SyncButtonPro
             className="flex items-center gap-2"
         >
             <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-            {isSyncing ? "Syncing..." : "Sync Engagement"}
+            {isSyncing ? step || "Syncing..." : "Sync Engagement"}
         </Button>
     );
 }
