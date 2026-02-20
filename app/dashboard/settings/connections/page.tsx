@@ -26,7 +26,7 @@ export default async function ConnectionsPage({
         .eq("user_id", user.id)
         .eq("platform", "threads")
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
 
     console.log("🔍 Connections Page - User ID:", user.id);
     console.log("🔍 Connections Page - Threads Account:", threadsAccount);
