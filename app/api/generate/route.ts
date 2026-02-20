@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { input, model, tone, creatorBookmarks, brandGuidelines } = body;
+        const { input, model, tone, archetype, creatorBookmarks, brandGuidelines } = body;
 
         if (!input) {
             return NextResponse.json({ error: "Input is required" }, { status: 400 });
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
             input,
             tone: tone || prefs?.tone || 'casual',
             model: (model as AiModel) || prefs?.preferred_ai_model || 'gemini',
+            archetype,
             voiceAnalysis: prefs?.voice_analysis,
             creatorBookmarks,
             brandGuidelines,

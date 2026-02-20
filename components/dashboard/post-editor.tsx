@@ -23,6 +23,7 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [model, setModel] = useState("gemini");
     const [tone, setTone] = useState("casual");
+    const [archetype, setArchetype] = useState("observer");
     const router = useRouter();
 
     const [isPublishing, setIsPublishing] = useState(false);
@@ -39,6 +40,7 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                     input,
                     model,
                     tone,
+                    archetype,
                 }),
             });
 
@@ -228,6 +230,35 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                                 </SelectContent>
                             </Select>
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Viral Archetype</Label>
+                        <Select value={archetype} onValueChange={setArchetype}>
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="observer">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">The Patient Observer</span>
+                                        <span className="text-xs text-muted-foreground">Validates struggle, builds hope</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="prophet">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">The Dramatic Prophet</span>
+                                        <span className="text-xs text-muted-foreground">Commands transformation, intense</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="devastator">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium">The Quiet Devastator</span>
+                                        <span className="text-xs text-muted-foreground">Ironic, haunting observations</span>
+                                    </div>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardContent>
                 <CardFooter>

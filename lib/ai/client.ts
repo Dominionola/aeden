@@ -2,11 +2,13 @@ import { generateWithGemini, analyzeVoiceWithGemini, type GeminiGenerateOptions 
 import { generateWithClaude, analyzeVoiceWithClaude, type ClaudeGenerateOptions } from "./anthropic";
 
 export type AiModel = "gemini" | "claude";
+export type AiArchetype = "observer" | "prophet" | "devastator";
 
 export interface GenerateOptions {
     input: string;
     tone: string;
     model?: AiModel;
+    archetype?: AiArchetype;
     voiceAnalysis?: {
         tone: string;
         characteristics: string[];

@@ -1,8 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { ARC_PROMPTS, getSystemPrompt, getUserPrompt } from "./prompts";
+import { type AiArchetype } from "./client";
 
 export interface ClaudeGenerateOptions {
     input: string;
     tone: string;
+    archetype?: AiArchetype;
     voiceAnalysis?: {
         tone: string;
         characteristics: string[];
@@ -27,7 +30,15 @@ function getClient() {
 
 export async function generateWithClaude(options: ClaudeGenerateOptions): Promise<string> {
     const anthropic = getClient();
-    const { input, tone, voiceAnalysis, creatorBookmarks, brandGuidelines, maxTokens = 1000 } = options;
+    const {
+        input,
+        tone,
+        archetype = 'observer',
+        voiceAnalysis,
+        creatorBookmarks,
+        brandGuidelines,
+        maxTokens = 1000
+    } = options;
 
     const charLimit = 500;
 
@@ -40,14 +51,14 @@ export async function generateWithClaude(options: ClaudeGenerateOptions): Promis
 - Patterns: ${voiceAnalysis.characteristics?.join(", ")}
 - Style: ${voiceAnalysis.voice_summary}
 
-Match this voice exactly.`;
+Match this voice exactly while adopting the selected archetype.`;
     }
 
     if (creatorBookmarks && creatorBookmarks.length > 0) {
         personaContext += `\n\nStyle inspiration (blend elements from):
 ${creatorBookmarks.map((c) => `- ${c.username}'s storytelling approach`).join("\n")}
 
-Study their patterns but maintain the user's authentic voice.`;
+Study their patterns but maintain the user's authentic voice and the archetype's structure.`;
     }
 
     if (brandGuidelines) {
@@ -55,35 +66,15 @@ Study their patterns but maintain the user's authentic voice.`;
 ${brandGuidelines}`;
     }
 
-    const prompt = `You are helping someone share their work progress on Threads.
-
-They worked on this today:
-"${input}"
-
-${personaContext}
-
-Generate ONE engaging Threads post (max ${charLimit} characters) that:
-- Uses a ${tone} tone
-- Matches their voice characteristics exactly
-- Tells a compelling story about their work
-- Feels authentic and personal, NOT robotic
-- Uses line breaks for readability
-- ${voiceAnalysis?.common_patterns?.emoji_usage === "frequent" ? "Includes 2-3 emojis" : "Uses 1-2 emojis sparingly"}
-- ${voiceAnalysis?.common_patterns?.line_breaks === "many" ? "Uses multiple line breaks" : "Keeps formatting clean"}
-
-CRITICAL:
-- Sound like THIS person, not a generic AI
-- If you have their voice analysis, match it precisely
-- If you have creator inspiration, blend those storytelling techniques
-- Always follow brand guidelines if provided
-
-Output ONLY the post text, nothing else.`;
+    const systemPrompt = getSystemPrompt(archetype);
+    const userPrompt = getUserPrompt(input, tone);
 
     try {
         const message = await anthropic.messages.create({
             model: "claude-sonnet-4-20250514",
             max_tokens: maxTokens,
-            messages: [{ role: "user", content: prompt }],
+            system: systemPrompt,
+            messages: [{ role: "user", content: userPrompt }],
         });
 
         const postText = message.content[0].type === "text" ? message.content[0].text.trim() : "";
