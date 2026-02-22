@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { BarChart3, Heart, MessageCircle, Eye, Share2, TrendingUp, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow, format, subDays } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import AnalyticsSyncButton from "@/components/dashboard/analytics/sync-button";
 import EngagementChart from "@/components/dashboard/analytics/engagement-chart";
 import BackgroundPostSync from "@/components/dashboard/analytics/background-sync";
@@ -57,20 +57,7 @@ export default async function AnalyticsPage() {
         .sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0))
         .slice(0, 5);
 
-    // Chart data — last 30 days
-    const last30Days = Array.from({ length: 30 }, (_, i) => {
-        const date = subDays(new Date(), 29 - i);
-        const dateStr = format(date, "yyyy-MM-dd");
-        const dayPosts = publishedPosts.filter(p =>
-            p.published_at && p.published_at.startsWith(dateStr)
-        );
-        return {
-            date: format(date, "MMM d"),
-            likes: dayPosts.reduce((s, p) => s + (p.likes ?? 0), 0),
-            impressions: dayPosts.reduce((s, p) => s + (p.impressions ?? 0), 0),
-            posts: dayPosts.length,
-        };
-    });
+
 
     const lastSynced = publishedPosts
         .filter(p => p.last_analytics_sync)
@@ -132,12 +119,18 @@ export default async function AnalyticsPage() {
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
                             <BarChart3 className="h-4 w-4 text-blue-500" />
-                            Likes · Last 30 Days
+                            Performance
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         {publishedPosts.length > 0 ? (
-                            <EngagementChart data={last30Days} />
+                            <EngagementChart posts={publishedPosts.map(p => ({
+                                published_at: p.published_at,
+                                likes: p.likes,
+                                comments: p.comments,
+                                shares: p.shares,
+                                impressions: p.impressions,
+                            }))} />
                         ) : (
                             <EmptyChartState />
                         )}
