@@ -9,8 +9,10 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
+    Legend,
 } from "recharts";
 import { format, subDays } from "date-fns";
+import { GitCompareArrows, X } from "lucide-react";
 
 /* ───── Types ───── */
 
@@ -29,7 +31,6 @@ interface MetricOption {
     label: string;
     color: string;
     gradientId: string;
-    /** Maps the raw PostDataPoint fields into a single number */
     getValue: (p: PostDataPoint) => number;
 }
 
@@ -37,35 +38,35 @@ const METRICS: MetricOption[] = [
     {
         key: "likes",
         label: "Likes",
-        color: "#e11d48",       // rose-600
+        color: "#e11d48",
         gradientId: "likesG",
         getValue: (p) => p.likes ?? 0,
     },
     {
         key: "replies",
         label: "Replies",
-        color: "#8b5cf6",       // violet-500
+        color: "#8b5cf6",
         gradientId: "repliesG",
         getValue: (p) => p.comments ?? 0,
     },
     {
         key: "views",
         label: "Views",
-        color: "#3b82f6",       // blue-500
+        color: "#3b82f6",
         gradientId: "viewsG",
         getValue: (p) => p.impressions ?? 0,
     },
     {
         key: "reposts",
         label: "Reposts & Quotes",
-        color: "#f59e0b",       // amber-500
+        color: "#f59e0b",
         gradientId: "repostsG",
         getValue: (p) => p.shares ?? 0,
     },
     {
         key: "engagement",
         label: "Total Engagement",
-        color: "#22c55e",       // green-500
+        color: "#22c55e",
         gradientId: "engagementG",
         getValue: (p) => (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0),
     },
@@ -87,12 +88,15 @@ interface EngagementChartProps {
 }
 
 export default function EngagementChart({ posts }: EngagementChartProps) {
-    const [selectedMetric, setSelectedMetric] = useState<MetricKey>("likes");
+    const [primaryMetric, setPrimaryMetric] = useState<MetricKey>("likes");
+    const [compareMetric, setCompareMetric] = useState<MetricKey | null>(null);
     const [selectedDays, setSelectedDays] = useState(30);
 
-    const metric = METRICS.find((m) => m.key === selectedMetric)!;
+    const primary = METRICS.find((m) => m.key === primaryMetric)!;
+    const compare = compareMetric ? METRICS.find((m) => m.key === compareMetric)! : null;
+    const isComparing = compare !== null;
 
-    // Aggregate posts into daily buckets based on selected metric + range
+    // Build chart data with primary + optional compare values
     const chartData = useMemo(() => {
         return Array.from({ length: selectedDays }, (_, i) => {
             const date = subDays(new Date(), selectedDays - 1 - i);
@@ -102,34 +106,90 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                 (p) => p.published_at && p.published_at.startsWith(dateStr)
             );
 
-            return {
+            const point: Record<string, string | number> = {
                 date: format(date, "MMM d"),
-                value: dayPosts.reduce((sum, p) => sum + metric.getValue(p), 0),
+                primary: dayPosts.reduce((sum, p) => sum + primary.getValue(p), 0),
             };
-        });
-    }, [posts, selectedMetric, selectedDays, metric]);
 
-    // Adaptive tick spacing based on range
+            if (compare) {
+                point.compare = dayPosts.reduce((sum, p) => sum + compare.getValue(p), 0);
+            }
+
+            return point;
+        });
+    }, [posts, primaryMetric, compareMetric, selectedDays, primary, compare]);
+
     const tickInterval = selectedDays <= 14 ? 1 : selectedDays <= 30 ? 4 : selectedDays <= 60 ? 7 : 10;
+
+    const handleToggleCompare = () => {
+        if (isComparing) {
+            setCompareMetric(null);
+        } else {
+            // Default the second metric to something different
+            const defaultCompare = METRICS.find((m) => m.key !== primaryMetric)!;
+            setCompareMetric(defaultCompare.key);
+        }
+    };
 
     return (
         <div>
             {/* Controls row */}
             <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-                {/* Metric dropdown */}
-                <select
-                    value={selectedMetric}
-                    onChange={(e) => setSelectedMetric(e.target.value as MetricKey)}
-                    className="text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
-                >
-                    {METRICS.map((m) => (
-                        <option key={m.key} value={m.key}>
-                            {m.label}
-                        </option>
-                    ))}
-                </select>
+                {/* Left: metric selectors + compare toggle */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    {/* Primary metric */}
+                    <select
+                        value={primaryMetric}
+                        onChange={(e) => {
+                            const val = e.target.value as MetricKey;
+                            setPrimaryMetric(val);
+                            if (val === compareMetric) setCompareMetric(null);
+                        }}
+                        className="text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
+                    >
+                        {METRICS.map((m) => (
+                            <option key={m.key} value={m.key}>
+                                {m.label}
+                            </option>
+                        ))}
+                    </select>
 
-                {/* Time range pills */}
+                    {/* Compare toggle */}
+                    <button
+                        onClick={handleToggleCompare}
+                        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-all ${isComparing
+                                ? "bg-blue-50 text-blue-700 border-blue-200"
+                                : "bg-gray-50 text-gray-500 border-gray-200 hover:text-gray-700 hover:border-gray-300"
+                            }`}
+                    >
+                        {isComparing ? (
+                            <X className="h-3.5 w-3.5" />
+                        ) : (
+                            <GitCompareArrows className="h-3.5 w-3.5" />
+                        )}
+                        {isComparing ? "Remove" : "Compare"}
+                    </button>
+
+                    {/* Compare metric dropdown (only visible when comparing) */}
+                    {isComparing && (
+                        <>
+                            <span className="text-xs text-gray-400">vs</span>
+                            <select
+                                value={compareMetric ?? ""}
+                                onChange={(e) => setCompareMetric(e.target.value as MetricKey)}
+                                className="text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-200 cursor-pointer"
+                            >
+                                {METRICS.filter((m) => m.key !== primaryMetric).map((m) => (
+                                    <option key={m.key} value={m.key}>
+                                        {m.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </>
+                    )}
+                </div>
+
+                {/* Right: time range pills */}
                 <div className="flex items-center gap-1 bg-gray-50 rounded-lg p-1 border border-gray-200">
                     {TIME_RANGES.map((range) => (
                         <button
@@ -146,6 +206,20 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                 </div>
             </div>
 
+            {/* Legend when comparing */}
+            {isComparing && compare && (
+                <div className="flex items-center gap-4 mb-3 text-xs">
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: primary.color }} />
+                        <span className="text-gray-600">{primary.label}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: compare.color }} />
+                        <span className="text-gray-600">{compare.label}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Chart */}
             <ResponsiveContainer width="100%" height={220}>
                 <AreaChart
@@ -153,10 +227,16 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                     margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
                 >
                     <defs>
-                        <linearGradient id={metric.gradientId} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={metric.color} stopOpacity={0.2} />
-                            <stop offset="95%" stopColor={metric.color} stopOpacity={0} />
+                        <linearGradient id={`${primary.gradientId}_p`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={primary.color} stopOpacity={isComparing ? 0.1 : 0.2} />
+                            <stop offset="95%" stopColor={primary.color} stopOpacity={0} />
                         </linearGradient>
+                        {compare && (
+                            <linearGradient id={`${compare.gradientId}_c`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={compare.color} stopOpacity={0.1} />
+                                <stop offset="95%" stopColor={compare.color} stopOpacity={0} />
+                            </linearGradient>
+                        )}
                     </defs>
 
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -182,37 +262,84 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                         }
                     />
 
-                    <Tooltip content={<ChartTooltip metricLabel={metric.label} color={metric.color} />} />
+                    <Tooltip
+                        content={
+                            <CompareTooltip
+                                primaryLabel={primary.label}
+                                primaryColor={primary.color}
+                                compareLabel={compare?.label}
+                                compareColor={compare?.color}
+                            />
+                        }
+                    />
 
+                    {/* Primary line */}
                     <Area
                         type="monotone"
-                        dataKey="value"
-                        stroke={metric.color}
+                        dataKey="primary"
+                        name={primary.label}
+                        stroke={primary.color}
                         strokeWidth={2}
-                        fill={`url(#${metric.gradientId})`}
+                        fill={`url(#${primary.gradientId}_p)`}
                         dot={false}
-                        activeDot={{ r: 4, fill: metric.color, strokeWidth: 0 }}
+                        activeDot={{ r: 4, fill: primary.color, strokeWidth: 0 }}
                     />
+
+                    {/* Compare line */}
+                    {compare && (
+                        <Area
+                            type="monotone"
+                            dataKey="compare"
+                            name={compare.label}
+                            stroke={compare.color}
+                            strokeWidth={2}
+                            strokeDasharray="6 3"
+                            fill={`url(#${compare.gradientId}_c)`}
+                            dot={false}
+                            activeDot={{ r: 4, fill: compare.color, strokeWidth: 0 }}
+                        />
+                    )}
                 </AreaChart>
             </ResponsiveContainer>
         </div>
     );
 }
 
-/* ───── Tooltip ───── */
+/* ───── Compare Tooltip ───── */
 
-function ChartTooltip({ active, payload, label, metricLabel, color }: any) {
+function CompareTooltip({
+    active,
+    payload,
+    label,
+    primaryLabel,
+    primaryColor,
+    compareLabel,
+    compareColor,
+}: any) {
     if (!active || !payload || !payload.length) return null;
 
     return (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm">
-            <p className="font-semibold text-gray-900 mb-1">{label}</p>
-            <div className="flex items-center justify-between gap-4">
-                <span className="text-gray-500">{metricLabel}</span>
-                <span className="font-medium" style={{ color }}>
-                    {payload[0].value.toLocaleString()}
-                </span>
-            </div>
+        <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm min-w-[140px]">
+            <p className="font-semibold text-gray-900 mb-2">{label}</p>
+            {payload.map((entry: any, idx: number) => {
+                const isCompare = entry.dataKey === "compare";
+                const entryLabel = isCompare ? compareLabel : primaryLabel;
+                const entryColor = isCompare ? compareColor : primaryColor;
+                return (
+                    <div key={idx} className="flex items-center justify-between gap-4 py-0.5">
+                        <div className="flex items-center gap-1.5">
+                            <span
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: entryColor }}
+                            />
+                            <span className="text-gray-500">{entryLabel}</span>
+                        </div>
+                        <span className="font-medium" style={{ color: entryColor }}>
+                            {entry.value.toLocaleString()}
+                        </span>
+                    </div>
+                );
+            })}
         </div>
     );
 }
