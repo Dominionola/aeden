@@ -281,46 +281,31 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                         }
                     />
 
-                    {isComparing ? (
-                        <>
-                            {/* Compare mode: no fills, just clean lines. Render both so they're both visible */}
-                            <Area
-                                type="linear"
-                                dataKey="primary"
-                                yAxisId="left"
-                                name={primary.label}
-                                stroke={primary.color}
-                                strokeWidth={2.5}
-                                fill="none"
-                                dot={false}
-                                activeDot={{ r: 4, fill: primary.color, strokeWidth: 0 }}
-                            />
-                            <Area
-                                type="linear"
-                                dataKey="compare"
-                                yAxisId="right"
-                                name={compare!.label}
-                                stroke={compare!.color}
-                                strokeWidth={2.5}
-                                fill="none"
-                                dot={false}
-                                activeDot={{ r: 4, fill: compare!.color, strokeWidth: 0 }}
-                            />
-                        </>
-                    ) : (
-                        /* Single mode: area fill with gradient */
-                        <Area
-                            type="linear"
-                            dataKey="primary"
-                            yAxisId="left"
-                            name={primary.label}
-                            stroke={primary.color}
-                            strokeWidth={2}
-                            fill={`url(#${primary.gradientId}_p)`}
-                            dot={false}
-                            activeDot={{ r: 4, fill: primary.color, strokeWidth: 0 }}
-                        />
-                    )}
+                    {/* Primary line */}
+                    <Area
+                        type="linear"
+                        dataKey="primary"
+                        yAxisId="left"
+                        name={primary.label}
+                        stroke={primary.color}
+                        strokeWidth={isComparing ? 2.5 : 2}
+                        fill={isComparing ? "none" : `url(#${primary.gradientId}_p)`}
+                        dot={false}
+                        activeDot={{ r: 4, fill: primary.color, strokeWidth: 0 }}
+                    />
+
+                    {/* Compare line — always rendered, hidden when not comparing */}
+                    <Area
+                        type="linear"
+                        dataKey="compare"
+                        yAxisId={isComparing ? "right" : "left"}
+                        name={compare?.label ?? ""}
+                        stroke={isComparing ? compare!.color : "transparent"}
+                        strokeWidth={2.5}
+                        fill="none"
+                        dot={false}
+                        activeDot={isComparing ? { r: 4, fill: compare!.color, strokeWidth: 0 } : false}
+                    />
                 </AreaChart>
             </ResponsiveContainer>
         </div>
