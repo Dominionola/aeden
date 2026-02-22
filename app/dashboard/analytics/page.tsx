@@ -112,67 +112,48 @@ export default async function AnalyticsPage() {
                 />
             </div>
 
-            {/* Chart + Top Posts */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Engagement Chart */}
-                <Card className="lg:col-span-2 shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                            <BarChart3 className="h-4 w-4 text-blue-500" />
-                            Performance
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {publishedPosts.length > 0 ? (
-                            <EngagementChart posts={publishedPosts.map(p => ({
-                                published_at: p.published_at,
-                                likes: p.likes,
-                                comments: p.comments,
-                                shares: p.shares,
-                                impressions: p.impressions,
-                            }))} />
-                        ) : (
-                            <EmptyChartState />
-                        )}
-                    </CardContent>
-                </Card>
+            {/* Performance Chart — Full Width */}
+            <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-blue-500" />
+                        Performance
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {publishedPosts.length > 0 ? (
+                        <EngagementChart posts={publishedPosts.map(p => ({
+                            published_at: p.published_at,
+                            likes: p.likes,
+                            comments: p.comments,
+                            shares: p.shares,
+                            impressions: p.impressions,
+                        }))} />
+                    ) : (
+                        <EmptyChartState />
+                    )}
+                </CardContent>
+            </Card>
 
-                {/* Quick Stats */}
-                <Card className="shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-amber-500" />
-                            Overview
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                            <span className="text-sm text-gray-600">Total Posts</span>
-                            <span className="font-semibold text-gray-900">{totalPosts ?? 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                            <span className="text-sm text-gray-600">Published</span>
-                            <span className="font-semibold text-gray-900">{publishedCount ?? 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                            <span className="text-sm text-gray-600">Total Likes</span>
-                            <span className="font-semibold text-rose-600">{formatNumber(totalLikes)}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                            <span className="text-sm text-gray-600">Total Replies</span>
-                            <span className="font-semibold text-violet-600">{formatNumber(totalComments)}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                            <span className="text-sm text-gray-600">Reposts + Quotes</span>
-                            <span className="font-semibold text-gray-900">{formatNumber(totalShares)}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2">
-                            <span className="text-sm text-gray-600">Total Views</span>
-                            <span className="font-semibold text-blue-600">{formatNumber(totalImpressions)}</span>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+            {/* Overview — Horizontal Grid */}
+            <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-amber-500" />
+                        Overview
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                        <OverviewStat label="Total Posts" value={totalPosts ?? 0} color="text-gray-900" />
+                        <OverviewStat label="Published" value={publishedCount ?? 0} color="text-gray-900" />
+                        <OverviewStat label="Total Likes" value={formatNumber(totalLikes)} color="text-rose-600" />
+                        <OverviewStat label="Total Replies" value={formatNumber(totalComments)} color="text-violet-600" />
+                        <OverviewStat label="Reposts + Quotes" value={formatNumber(totalShares)} color="text-amber-600" />
+                        <OverviewStat label="Total Views" value={formatNumber(totalImpressions)} color="text-blue-600" />
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Top Posts Table */}
             <Card className="shadow-sm">
@@ -254,6 +235,15 @@ function StatCard({
                 </div>
             </CardContent>
         </Card>
+    );
+}
+
+function OverviewStat({ label, value, color }: { label: string; value: string | number; color: string }) {
+    return (
+        <div className="text-center py-2">
+            <p className="text-xs text-gray-500 mb-1">{label}</p>
+            <p className={`text-xl font-bold ${color}`}>{value}</p>
+        </div>
     );
 }
 
