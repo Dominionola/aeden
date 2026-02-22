@@ -81,6 +81,12 @@ const TIME_RANGES = [
     { days: 90, label: "90D" },
 ];
 
+function formatAxisValue(v: number): string {
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+    return String(v);
+}
+
 /* ───── Component ───── */
 
 interface EngagementChartProps {
@@ -158,8 +164,8 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                     <button
                         onClick={handleToggleCompare}
                         className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-all ${isComparing
-                                ? "bg-blue-50 text-blue-700 border-blue-200"
-                                : "bg-gray-50 text-gray-500 border-gray-200 hover:text-gray-700 hover:border-gray-300"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : "bg-gray-50 text-gray-500 border-gray-200 hover:text-gray-700 hover:border-gray-300"
                             }`}
                     >
                         {isComparing ? (
@@ -196,8 +202,8 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                             key={range.days}
                             onClick={() => setSelectedDays(range.days)}
                             className={`text-xs font-medium px-2.5 py-1 rounded-md transition-all ${selectedDays === range.days
-                                    ? "bg-white text-gray-900 shadow-sm"
-                                    : "text-gray-500 hover:text-gray-700"
+                                ? "bg-white text-gray-900 shadow-sm"
+                                : "text-gray-500 hover:text-gray-700"
                                 }`}
                         >
                             {range.label}
@@ -221,19 +227,19 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
             )}
 
             {/* Chart */}
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={280}>
                 <AreaChart
                     data={chartData}
-                    margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                    margin={{ top: 5, right: isComparing ? 10 : 10, left: -20, bottom: 0 }}
                 >
                     <defs>
                         <linearGradient id={`${primary.gradientId}_p`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={primary.color} stopOpacity={isComparing ? 0.1 : 0.2} />
+                            <stop offset="5%" stopColor={primary.color} stopOpacity={isComparing ? 0.08 : 0.2} />
                             <stop offset="95%" stopColor={primary.color} stopOpacity={0} />
                         </linearGradient>
                         {compare && (
                             <linearGradient id={`${compare.gradientId}_c`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={compare.color} stopOpacity={0.1} />
+                                <stop offset="5%" stopColor={compare.color} stopOpacity={0.08} />
                                 <stop offset="95%" stopColor={compare.color} stopOpacity={0} />
                             </linearGradient>
                         )}
@@ -249,18 +255,26 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                         interval={tickInterval}
                     />
 
+                    {/* Left Y-axis — Primary metric */}
                     <YAxis
-                        tick={{ fontSize: 11, fill: "#9ca3af" }}
+                        yAxisId="left"
+                        tick={{ fontSize: 11, fill: primary.color }}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(v) =>
-                            v >= 1_000_000
-                                ? `${(v / 1_000_000).toFixed(1)}M`
-                                : v >= 1_000
-                                    ? `${(v / 1_000).toFixed(1)}K`
-                                    : String(v)
-                        }
+                        tickFormatter={formatAxisValue}
                     />
+
+                    {/* Right Y-axis — Compare metric (only when comparing) */}
+                    {isComparing && (
+                        <YAxis
+                            yAxisId="right"
+                            orientation="right"
+                            tick={{ fontSize: 11, fill: compare!.color }}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={formatAxisValue}
+                        />
+                    )}
 
                     <Tooltip
                         content={
@@ -273,10 +287,11 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                         }
                     />
 
-                    {/* Primary line */}
+                    {/* Primary line — sharp linear, left axis */}
                     <Area
-                        type="monotone"
+                        type="linear"
                         dataKey="primary"
+                        yAxisId="left"
                         name={primary.label}
                         stroke={primary.color}
                         strokeWidth={2}
@@ -285,15 +300,15 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                         activeDot={{ r: 4, fill: primary.color, strokeWidth: 0 }}
                     />
 
-                    {/* Compare line */}
+                    {/* Compare line — sharp linear, right axis */}
                     {compare && (
                         <Area
-                            type="monotone"
+                            type="linear"
                             dataKey="compare"
+                            yAxisId="right"
                             name={compare.label}
                             stroke={compare.color}
                             strokeWidth={2}
-                            strokeDasharray="6 3"
                             fill={`url(#${compare.gradientId}_c)`}
                             dot={false}
                             activeDot={{ r: 4, fill: compare.color, strokeWidth: 0 }}
