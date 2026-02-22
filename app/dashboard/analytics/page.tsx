@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format, subDays } from "date-fns";
 import AnalyticsSyncButton from "@/components/dashboard/analytics/sync-button";
 import EngagementChart from "@/components/dashboard/analytics/engagement-chart";
+import BackgroundPostSync from "@/components/dashboard/analytics/background-sync";
 
 export const metadata = {
     title: "Analytics | Aeden",
@@ -80,6 +81,8 @@ export default async function AnalyticsPage() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-8">
+            {/* Silent background sync for new posts */}
+            <BackgroundPostSync />
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>

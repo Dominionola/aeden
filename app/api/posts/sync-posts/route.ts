@@ -13,15 +13,16 @@ interface ThreadsPost {
 }
 
 /**
- * Fetches all posts from the user's Threads account via the API.
- * Supports pagination to get all posts (up to API limit).
+ * Fetches posts from the user's Threads account.
+ * In quick mode, only fetches the latest 10 posts for speed.
+ * In full mode, paginates through all posts.
  */
-async function fetchAllThreadsPosts(accessToken: string): Promise<ThreadsPost[]> {
+async function fetchThreadsPosts(accessToken: string, quick: boolean): Promise<ThreadsPost[]> {
     const fields = "id,text,timestamp,permalink,media_type,is_quote_post";
-    let url = `${THREADS_API_BASE}/me/threads?fields=${fields}&limit=100&access_token=${accessToken}`;
+    const limit = quick ? 10 : 100;
+    let url = `${THREADS_API_BASE}/me/threads?fields=${fields}&limit=${limit}&access_token=${accessToken}`;
     const allPosts: ThreadsPost[] = [];
 
-    // Paginate through all results
     while (url) {
         console.log(`📥 Fetching Threads posts page...`);
         const res = await fetch(url);
@@ -36,13 +37,16 @@ async function fetchAllThreadsPosts(accessToken: string): Promise<ThreadsPost[]>
             allPosts.push(...data.data);
         }
 
-        // Follow pagination cursor
+        // In quick mode, only fetch one page
+        if (quick) break;
+
+        // Follow pagination cursor for full mode
         url = data.paging?.cursors?.after
             ? `${THREADS_API_BASE}/me/threads?fields=${fields}&limit=100&after=${data.paging.cursors.after}&access_token=${accessToken}`
             : "";
     }
 
-    console.log(`📥 Total Threads posts fetched: ${allPosts.length}`);
+    console.log(`📥 Total Threads posts fetched: ${allPosts.length} (${quick ? "quick" : "full"} mode)`);
     return allPosts;
 }
 
@@ -54,6 +58,10 @@ export async function POST(request: NextRequest) {
         if (authError || !user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+
+        // Check if this is a quick sync (page load) or full sync (button click)
+        const url = new URL(request.url);
+        const quick = url.searchParams.get("quick") === "true";
 
         // 1. Get user's Threads connection
         const { data: account } = await supabase
@@ -71,8 +79,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 2. Fetch all posts from Threads API
-        const threadsPosts = await fetchAllThreadsPosts(account.access_token);
+        // 2. Fetch posts from Threads API
+        const threadsPosts = await fetchThreadsPosts(account.access_token, quick);
 
         if (threadsPosts.length === 0) {
             return NextResponse.json({ message: "No posts found on Threads", imported: 0 });
@@ -109,7 +117,7 @@ export async function POST(request: NextRequest) {
             platform_post_id: post.id,
             platform_post_url: post.permalink ?? null,
             published_at: post.timestamp,
-            source_type: "manual", // imported from Threads
+            source_type: "manual",
             likes: 0,
             comments: 0,
             shares: 0,
