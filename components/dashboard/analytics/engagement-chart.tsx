@@ -234,15 +234,9 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                 >
                     <defs>
                         <linearGradient id={`${primary.gradientId}_p`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={primary.color} stopOpacity={isComparing ? 0.08 : 0.2} />
+                            <stop offset="5%" stopColor={primary.color} stopOpacity={0.2} />
                             <stop offset="95%" stopColor={primary.color} stopOpacity={0} />
                         </linearGradient>
-                        {compare && (
-                            <linearGradient id={`${compare.gradientId}_c`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={compare.color} stopOpacity={0.08} />
-                                <stop offset="95%" stopColor={compare.color} stopOpacity={0} />
-                            </linearGradient>
-                        )}
                     </defs>
 
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -287,31 +281,44 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
                         }
                     />
 
-                    {/* Primary line — sharp linear, left axis */}
-                    <Area
-                        type="linear"
-                        dataKey="primary"
-                        yAxisId="left"
-                        name={primary.label}
-                        stroke={primary.color}
-                        strokeWidth={2}
-                        fill={`url(#${primary.gradientId}_p)`}
-                        dot={false}
-                        activeDot={{ r: 4, fill: primary.color, strokeWidth: 0 }}
-                    />
-
-                    {/* Compare line — sharp linear, right axis */}
-                    {compare && (
+                    {isComparing ? (
+                        <>
+                            {/* Compare mode: no fills, just clean lines. Render both so they're both visible */}
+                            <Area
+                                type="linear"
+                                dataKey="primary"
+                                yAxisId="left"
+                                name={primary.label}
+                                stroke={primary.color}
+                                strokeWidth={2.5}
+                                fill="none"
+                                dot={false}
+                                activeDot={{ r: 4, fill: primary.color, strokeWidth: 0 }}
+                            />
+                            <Area
+                                type="linear"
+                                dataKey="compare"
+                                yAxisId="right"
+                                name={compare!.label}
+                                stroke={compare!.color}
+                                strokeWidth={2.5}
+                                fill="none"
+                                dot={false}
+                                activeDot={{ r: 4, fill: compare!.color, strokeWidth: 0 }}
+                            />
+                        </>
+                    ) : (
+                        /* Single mode: area fill with gradient */
                         <Area
                             type="linear"
-                            dataKey="compare"
-                            yAxisId="right"
-                            name={compare.label}
-                            stroke={compare.color}
+                            dataKey="primary"
+                            yAxisId="left"
+                            name={primary.label}
+                            stroke={primary.color}
                             strokeWidth={2}
-                            fill={`url(#${compare.gradientId}_c)`}
+                            fill={`url(#${primary.gradientId}_p)`}
                             dot={false}
-                            activeDot={{ r: 4, fill: compare.color, strokeWidth: 0 }}
+                            activeDot={{ r: 4, fill: primary.color, strokeWidth: 0 }}
                         />
                     )}
                 </AreaChart>
