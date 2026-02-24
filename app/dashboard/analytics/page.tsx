@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { BarChart3, Heart, MessageCircle, Eye, Share2, TrendingUp, Zap } from "lucide-react";
+import { BarChart3, Heart, MessageCircle, Eye, TrendingUp, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow, format } from "date-fns";
+
+import { formatDistanceToNow } from "date-fns";
 import AnalyticsSyncButton from "@/components/dashboard/analytics/sync-button";
 import EngagementChart from "@/components/dashboard/analytics/engagement-chart";
 import BackgroundPostSync from "@/components/dashboard/analytics/background-sync";
+import PostAnalyticsList from "@/components/dashboard/analytics/post-analytics-list";
 
 export const metadata = {
     title: "Analytics | Aeden",
@@ -52,10 +53,7 @@ export default async function AnalyticsPage() {
         ? ((totalEngagements / totalImpressions) * 100).toFixed(1)
         : "0.0";
 
-    // Top 5 posts by likes
-    const topPosts = [...publishedPosts]
-        .sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0))
-        .slice(0, 5);
+
 
 
 
@@ -155,52 +153,16 @@ export default async function AnalyticsPage() {
                 </CardContent>
             </Card>
 
-            {/* Top Posts Table */}
+            {/* Post Analytics List — Sortable & Scrollable */}
             <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-emerald-500" />
-                        Top Performing Posts
+                        Post Analytics
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {topPosts.length > 0 ? (
-                        <div className="divide-y divide-gray-100">
-                            {topPosts.map((post, idx) => (
-                                <div key={post.id} className="flex items-start gap-4 py-4">
-                                    <span className="text-xl font-bold text-gray-200 w-6 shrink-0 mt-0.5">
-                                        {idx + 1}
-                                    </span>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">
-                                            {post.content}
-                                        </p>
-                                        {post.published_at && (
-                                            <p className="text-xs text-gray-400 mt-1">
-                                                {format(new Date(post.published_at), "MMM d, yyyy")}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-3 shrink-0 text-sm">
-                                        <span className="flex items-center gap-1 text-rose-600 font-medium">
-                                            <Heart className="h-3.5 w-3.5" />
-                                            {post.likes ?? 0}
-                                        </span>
-                                        <span className="flex items-center gap-1 text-gray-500">
-                                            <Eye className="h-3.5 w-3.5" />
-                                            {formatNumber(post.impressions ?? 0)}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-center py-12 text-gray-400">
-                            <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                            <p className="text-sm">No published posts yet.</p>
-                            <p className="text-xs mt-1">Publish a post to see your analytics here.</p>
-                        </div>
-                    )}
+                    <PostAnalyticsList posts={publishedPosts} />
                 </CardContent>
             </Card>
         </div>
