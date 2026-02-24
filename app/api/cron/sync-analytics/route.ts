@@ -7,7 +7,7 @@ const CRON_SECRET = process.env.CRON_SECRET;
 async function fetchPostInsights(
     platformPostId: string,
     accessToken: string
-): Promise<{ likes: number; replies: number; views: number; quotes: number; reposts: number }> {
+): Promise<{ likes: number; replies: number; views: number; quotes: number; reposts: number; follows: number }> {
     const url = `${THREADS_API_BASE}/${platformPostId}/insights?metric=likes,replies,views,quotes,reposts&access_token=${accessToken}`;
 
     const response = await fetch(url);
@@ -38,6 +38,7 @@ async function fetchPostInsights(
         views: metrics.views ?? 0,
         quotes: metrics.quotes ?? 0,
         reposts: metrics.reposts ?? 0,
+        follows: metrics.follows ?? 0,
     };
 }
 
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     // 1. Get all active Threads accounts
     const { data: accounts, error: accountsError } = await supabase
         .from("social_accounts")
-        .select("user_id, access_token")
+        .select("user_id, access_token, account_id")
         .eq("platform", "threads")
         .eq("is_active", true);
 
@@ -144,6 +145,7 @@ export async function GET(request: NextRequest) {
                             comments: insights.replies,
                             shares: insights.reposts + insights.quotes,
                             impressions: insights.views,
+                            follows: insights.follows,
                             last_analytics_sync: new Date().toISOString(),
                             updated_at: new Date().toISOString(),
                         })
@@ -154,6 +156,32 @@ export async function GET(request: NextRequest) {
                     totalFailed++;
                 }
             }
+        }
+
+        // 4. Sync follower count snapshot
+        try {
+            const followerUrl = `${THREADS_API_BASE}/${account.account_id}/threads_insights?metric=followers_count&access_token=${account.access_token}`;
+            const followerRes = await fetch(followerUrl);
+            const followerData = await followerRes.json();
+
+            if (followerRes.ok && followerData.data) {
+                let count = 0;
+                for (const item of followerData.data) {
+                    if (item.name === "followers_count") {
+                        count = Number(item.total_value?.value ?? item.values?.[0]?.value ?? 0);
+                    }
+                }
+                const today = new Date().toISOString().split("T")[0];
+                await supabase
+                    .from("follower_snapshots")
+                    .upsert(
+                        { user_id: account.user_id, follower_count: count, snapshot_date: today },
+                        { onConflict: "user_id,snapshot_date" }
+                    );
+                console.log(`⏰ Cron: Follower snapshot for user ${account.user_id}: ${count}`);
+            }
+        } catch (err: any) {
+            console.error(`⏰ Cron: Failed to sync follower count for user ${account.user_id}:`, err.message);
         }
     }
 

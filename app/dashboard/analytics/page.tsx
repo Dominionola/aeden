@@ -43,6 +43,16 @@ export default async function AnalyticsPage() {
 
     const publishedPosts = posts ?? [];
 
+    // Fetch follower snapshots for the chart (last 90 days)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const { data: followerSnapshots } = await supabase
+        .from("follower_snapshots")
+        .select("follower_count, snapshot_date")
+        .eq("user_id", user.id)
+        .gte("snapshot_date", ninetyDaysAgo.toISOString().split("T")[0])
+        .order("snapshot_date", { ascending: true });
+
     // Compute totals
     const totalLikes = publishedPosts.reduce((sum, p) => sum + (p.likes ?? 0), 0);
     const totalComments = publishedPosts.reduce((sum, p) => sum + (p.comments ?? 0), 0);
@@ -120,13 +130,16 @@ export default async function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                     {publishedPosts.length > 0 ? (
-                        <EngagementChart posts={publishedPosts.map(p => ({
-                            published_at: p.published_at,
-                            likes: p.likes,
-                            comments: p.comments,
-                            shares: p.shares,
-                            impressions: p.impressions,
-                        }))} />
+                        <EngagementChart
+                            posts={publishedPosts.map(p => ({
+                                published_at: p.published_at,
+                                likes: p.likes,
+                                comments: p.comments,
+                                shares: p.shares,
+                                impressions: p.impressions,
+                            }))}
+                            followerSnapshots={followerSnapshots ?? []}
+                        />
                     ) : (
                         <EmptyChartState />
                     )}

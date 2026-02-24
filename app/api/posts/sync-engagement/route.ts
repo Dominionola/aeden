@@ -7,7 +7,7 @@ const THREADS_API_BASE = "https://graph.threads.net/v1.0";
 async function fetchPostInsights(
     platformPostId: string,
     accessToken: string
-): Promise<{ likes: number; replies: number; views: number; quotes: number; reposts: number }> {
+): Promise<{ likes: number; replies: number; views: number; quotes: number; reposts: number; follows: number }> {
     const url = `${THREADS_API_BASE}/${platformPostId}/insights?metric=likes,replies,views,quotes,reposts&access_token=${accessToken}`;
 
     const response = await fetch(url);
@@ -39,6 +39,7 @@ async function fetchPostInsights(
         views: metrics.views ?? 0,
         quotes: metrics.quotes ?? 0,
         reposts: metrics.reposts ?? 0,
+        follows: metrics.follows ?? 0,
     };
 }
 
@@ -85,6 +86,7 @@ async function syncUserEngagement(
                     comments: insights.replies,
                     shares: insights.reposts + insights.quotes,
                     impressions: insights.views,
+                    follows: insights.follows,
                     last_analytics_sync: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 })
@@ -128,6 +130,31 @@ export async function POST(request: NextRequest) {
         }
 
         const result = await syncUserEngagement(supabase, user.id, account.access_token);
+
+        // Also sync follower count snapshot
+        try {
+            const followerUrl = `${THREADS_API_BASE}/${account.account_id}/threads_insights?metric=followers_count&access_token=${account.access_token}`;
+            const followerRes = await fetch(followerUrl);
+            const followerData = await followerRes.json();
+
+            if (followerRes.ok && followerData.data) {
+                let count = 0;
+                for (const item of followerData.data) {
+                    if (item.name === "followers_count") {
+                        count = Number(item.total_value?.value ?? item.values?.[0]?.value ?? 0);
+                    }
+                }
+                const today = new Date().toISOString().split("T")[0];
+                await supabase
+                    .from("follower_snapshots")
+                    .upsert(
+                        { user_id: user.id, follower_count: count, snapshot_date: today },
+                        { onConflict: "user_id,snapshot_date" }
+                    );
+            }
+        } catch (err: any) {
+            console.error("Failed to sync follower count:", err.message);
+        }
 
         return NextResponse.json({
             message: "Sync complete",

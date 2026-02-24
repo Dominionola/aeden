@@ -24,7 +24,7 @@ export interface PostDataPoint {
     impressions: number | null;
 }
 
-type MetricKey = "likes" | "replies" | "views" | "reposts" | "engagement";
+type MetricKey = "likes" | "replies" | "views" | "reposts" | "followers" | "engagement";
 
 interface MetricOption {
     key: MetricKey;
@@ -32,6 +32,7 @@ interface MetricOption {
     color: string;
     gradientId: string;
     getValue: (p: PostDataPoint) => number;
+    isSnapshot?: boolean; // true = uses follower snapshots instead of post data
 }
 
 const METRICS: MetricOption[] = [
@@ -64,6 +65,14 @@ const METRICS: MetricOption[] = [
         getValue: (p) => p.shares ?? 0,
     },
     {
+        key: "followers",
+        label: "Followers",
+        color: "#10b981",
+        gradientId: "followersG",
+        getValue: () => 0, // unused — uses snapshot data
+        isSnapshot: true,
+    },
+    {
         key: "engagement",
         label: "Total Engagement",
         color: "#22c55e",
@@ -89,11 +98,17 @@ function formatAxisValue(v: number): string {
 
 /* ───── Component ───── */
 
-interface EngagementChartProps {
-    posts: PostDataPoint[];
+export interface FollowerSnapshot {
+    follower_count: number;
+    snapshot_date: string;
 }
 
-export default function EngagementChart({ posts }: EngagementChartProps) {
+interface EngagementChartProps {
+    posts: PostDataPoint[];
+    followerSnapshots?: FollowerSnapshot[];
+}
+
+export default function EngagementChart({ posts, followerSnapshots = [] }: EngagementChartProps) {
     const [primaryMetric, setPrimaryMetric] = useState<MetricKey>("likes");
     const [compareMetric, setCompareMetric] = useState<MetricKey | null>(null);
     const [selectedDays, setSelectedDays] = useState(30);
@@ -101,6 +116,15 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
     const primary = METRICS.find((m) => m.key === primaryMetric)!;
     const compare = compareMetric ? METRICS.find((m) => m.key === compareMetric)! : null;
     const isComparing = compare !== null;
+
+    // Build a lookup for follower snapshots by date
+    const followerByDate = useMemo(() => {
+        const map: Record<string, number> = {};
+        for (const s of followerSnapshots) {
+            map[s.snapshot_date] = s.follower_count;
+        }
+        return map;
+    }, [followerSnapshots]);
 
     // Build chart data with primary + optional compare values
     const chartData = useMemo(() => {
@@ -114,16 +138,20 @@ export default function EngagementChart({ posts }: EngagementChartProps) {
 
             const point: Record<string, string | number> = {
                 date: format(date, "MMM d"),
-                primary: dayPosts.reduce((sum, p) => sum + primary.getValue(p), 0),
+                primary: primary.isSnapshot
+                    ? (followerByDate[dateStr] ?? 0)
+                    : dayPosts.reduce((sum, p) => sum + primary.getValue(p), 0),
             };
 
             if (compare) {
-                point.compare = dayPosts.reduce((sum, p) => sum + compare.getValue(p), 0);
+                point.compare = compare.isSnapshot
+                    ? (followerByDate[dateStr] ?? 0)
+                    : dayPosts.reduce((sum, p) => sum + compare.getValue(p), 0);
             }
 
             return point;
         });
-    }, [posts, primaryMetric, compareMetric, selectedDays, primary, compare]);
+    }, [posts, primaryMetric, compareMetric, selectedDays, primary, compare, followerByDate]);
 
     const tickInterval = selectedDays <= 14 ? 1 : selectedDays <= 30 ? 4 : selectedDays <= 60 ? 7 : 10;
 
