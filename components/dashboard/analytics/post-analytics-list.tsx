@@ -104,18 +104,17 @@ export default function PostAnalyticsList({ posts }: { posts: PostData[] }) {
                             key={post.id}
                             className="flex items-start gap-4 py-4 first:pt-0 last:pb-0"
                         >
-                            {/* Rank */}
-                            <span className="text-lg font-bold text-gray-200 w-6 shrink-0 mt-0.5 tabular-nums text-right">
+                            <span className="text-lg font-bold text-gray-900 w-6 shrink-0 mt-0.5 tabular-nums text-right">
                                 {idx + 1}
                             </span>
 
                             {/* Content + Date */}
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed">
+                                <p className="text-sm text-gray-900 font-medium line-clamp-2 leading-relaxed">
                                     {post.content}
                                 </p>
                                 {post.published_at && (
-                                    <p className="text-xs text-gray-400 mt-1">
+                                    <p className="text-xs text-gray-500 mt-1 font-medium">
                                         {format(new Date(post.published_at), "MMM d, yyyy")}
                                     </p>
                                 )}
@@ -171,7 +170,7 @@ function MetricPill({
 }) {
     return (
         <span
-            className={`flex items-center gap-1 font-medium transition-opacity ${active ? color : "text-gray-400"
+            className={`flex items-center gap-1 font-medium transition-opacity ${active ? color : "text-gray-700"
                 }`}
         >
             {icon}

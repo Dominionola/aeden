@@ -127,8 +127,11 @@ export default function EngagementChart({ posts, followerSnapshots = [] }: Engag
             actuals[s.snapshot_date] = s.follower_count;
         }
 
-        // Start with the earliest known snapshot to prevent a spike from 0
-        let lastKnown = followerSnapshots[0].follower_count;
+        // Find the earliest snapshot to initialize forward-fill and prevent a spike from 0
+        const sortedSnapshots = [...followerSnapshots].sort(
+            (a, b) => a.snapshot_date.localeCompare(b.snapshot_date)
+        );
+        let lastKnown = sortedSnapshots[0].follower_count;
 
         // Iterate chronologically to forward-fill and back-fill
         for (let i = 0; i < selectedDays; i++) {
@@ -143,7 +146,6 @@ export default function EngagementChart({ posts, followerSnapshots = [] }: Engag
 
         return map;
     }, [followerSnapshots, selectedDays]);
-
     // Build chart data with primary + optional compare values
     const chartData = useMemo(() => {
         return Array.from({ length: selectedDays }, (_, i) => {

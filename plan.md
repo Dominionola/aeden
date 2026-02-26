@@ -28,10 +28,11 @@
 | **Foundation** | ✅ Complete | 100% | P0 |
 | **Dashboard UI** | ✅ Complete | 100% | P0 |
 | **Manual Input (KILLER FEATURE)** | 🔄 In Progress | 70% | P0 |
-| **Image Upload** | ⏳ Not Started | 0% | P0 |
-| **Save to Database** | ⏳ Not Started | 0% | P0 |
-| **Threads Publishing** | 🔄 In Progress | 60% | P0 || **Post Listing** | ⏳ Not Started | 0% | P0 |
-| **Basic Analytics** | ⏳ Not Started | 0% | P0 |
+| **Image Upload** | ✅ Complete | 100% | P0 |
+| **Save to Database** | ✅ Complete | 100% | P0 |
+| **Threads Publishing** | ✅ Complete | 100% | P0 |
+| **Post Listing** | ✅ Complete | 100% | P0 |
+| **Basic Analytics** | ✅ Complete | 100% | P0 |
 | **GitHub Integration** | ⏳ Not Started | 0% | P1 |
 | **Notion Integration** | ⏳ Not Started | 0% | P1 |
 | **Persona Training** | ⏳ Not Started | 0% | P1 |
@@ -119,13 +120,13 @@
   - DELETE: Delete post
   - Save `source_type: 'manual'`, `source_data: {manual_input}`
 
-- [ ] **Post Listing** - `app/dashboard/posts/page.tsx`
+- [x] **Post Listing** - `app/dashboard/posts/page.tsx`
   - Show all posts (drafts, scheduled, published)
   - Filter by status
   - Search
   - Bulk actions
 
-- [ ] **Edit Post** - `app/dashboard/posts/[id]/page.tsx`
+- [x] **Edit Post** - `app/dashboard/posts/[id]/page.tsx`
   - Load existing post
   - Edit content, image
   - Update tone
@@ -133,7 +134,7 @@
 
 ---
 
-## ⏳ PHASE 4: THREADS PUBLISHING (PRIORITY 1)
+## ✅ PHASE 4: THREADS PUBLISHING (COMPLETE)
 
 > **Why Threads-first**: FREE API, unlimited posts. Twitter = $100/month. LinkedIn = V2.
 
@@ -143,8 +144,8 @@
 - [x] Store in `social_accounts` table
 - [x] `app/dashboard/settings/connections/page.tsx` - Manage connected accounts
 
-### Publishing
-- [ ] `lib/threads/client.ts` - Threads API wrapper
+### Publishing ✅
+- [x] `lib/threads/client.ts` - Threads API wrapper
   ```typescript
   publishToThreads({
     accessToken,
@@ -153,27 +154,27 @@
     imageUrl  // Optional
   })
   ```
-- [ ] `app/api/posts/publish/route.ts`
+- [x] `app/api/posts/publish/route.ts`
   - Get post from DB
   - Publish to Threads
   - Update post: `status='published'`, `platform_post_id`, `platform_post_url`
 
-### Engagement Sync
-- [ ] `app/api/posts/sync-engagement/route.ts`
+### Engagement Sync ✅
+- [x] `app/api/posts/sync-engagement/route.ts`
   - Run every 6 hours
   - Fetch likes, comments, views from Threads
   - Update posts table
 
 ---
 
-## ⏳ PHASE 5: BASIC ANALYTICS (PRIORITY 1)
+## ✅ PHASE 5: BASIC ANALYTICS (COMPLETE)
 
 ### Dashboard
-- [ ] `app/dashboard/analytics/page.tsx`
+- [x] `app/dashboard/analytics/page.tsx`
   - Total posts, total impressions, avg engagement rate
-  - Chart: Engagement over time (last 30 days)
-  - Top performing posts (by likes)
-  - Best posting times
+  - Chart: Engagement over time (last 30 days) + Follower Growth
+  - Top performing posts (by likes/replies)
+  - AI Strategy Advisor & Weekly Goals
 
 ---
 

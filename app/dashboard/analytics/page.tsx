@@ -8,6 +8,8 @@ import AnalyticsSyncButton from "@/components/dashboard/analytics/sync-button";
 import EngagementChart from "@/components/dashboard/analytics/engagement-chart";
 import BackgroundPostSync from "@/components/dashboard/analytics/background-sync";
 import PostAnalyticsList from "@/components/dashboard/analytics/post-analytics-list";
+import StrategyInsights from "@/components/dashboard/analytics/strategy-insights";
+import WeeklyGoals from "@/components/dashboard/analytics/weekly-goals";
 
 export const metadata = {
     title: "Analytics | Aeden",
@@ -119,6 +121,12 @@ export default async function AnalyticsPage() {
                     subtitle="likes + replies + shares / views"
                 />
             </div>
+
+            {/* AI Advisor - Strategy */}
+            <StrategyInsights posts={publishedPosts} />
+
+            {/* Weekly Goals */}
+            <WeeklyGoals posts={publishedPosts} />
 
             {/* Performance Chart — Full Width */}
             <Card className="shadow-sm">
