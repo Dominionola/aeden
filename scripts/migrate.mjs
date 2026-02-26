@@ -60,7 +60,10 @@ async function main() {
             });
 
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || JSON.stringify(data));
+            if (!res.ok || !data.ok) {
+                const errContext = data.results?.filter(r => r.status === "error") || [];
+                throw new Error(data.error || JSON.stringify(errContext, null, 2));
+            }
             console.log("✅ done");
         } catch (err) {
             console.log("❌ failed");

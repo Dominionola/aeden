@@ -86,7 +86,6 @@ async function syncUserEngagement(
                     comments: insights.replies,
                     shares: insights.reposts + insights.quotes,
                     impressions: insights.views,
-                    follows: insights.follows,
                     last_analytics_sync: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 })

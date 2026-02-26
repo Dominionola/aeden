@@ -12,7 +12,7 @@ import {
     Legend,
 } from "recharts";
 import { format, subDays } from "date-fns";
-import { GitCompareArrows, X } from "lucide-react";
+import { GitCompareArrows, X, Info } from "lucide-react";
 
 /* ───── Types ───── */
 
@@ -117,14 +117,32 @@ export default function EngagementChart({ posts, followerSnapshots = [] }: Engag
     const compare = compareMetric ? METRICS.find((m) => m.key === compareMetric)! : null;
     const isComparing = compare !== null;
 
-    // Build a lookup for follower snapshots by date
-    const followerByDate = useMemo(() => {
+    // Pre-calculate continuous follower values for the chart timeline
+    const followerValuesByDate = useMemo(() => {
         const map: Record<string, number> = {};
+        if (followerSnapshots.length === 0) return map;
+
+        const actuals: Record<string, number> = {};
         for (const s of followerSnapshots) {
-            map[s.snapshot_date] = s.follower_count;
+            actuals[s.snapshot_date] = s.follower_count;
         }
+
+        // Start with the earliest known snapshot to prevent a spike from 0
+        let lastKnown = followerSnapshots[0].follower_count;
+
+        // Iterate chronologically to forward-fill and back-fill
+        for (let i = 0; i < selectedDays; i++) {
+            const date = subDays(new Date(), selectedDays - 1 - i);
+            const dateStr = format(date, "yyyy-MM-dd");
+
+            if (actuals[dateStr] !== undefined) {
+                lastKnown = actuals[dateStr];
+            }
+            map[dateStr] = lastKnown;
+        }
+
         return map;
-    }, [followerSnapshots]);
+    }, [followerSnapshots, selectedDays]);
 
     // Build chart data with primary + optional compare values
     const chartData = useMemo(() => {
@@ -139,19 +157,19 @@ export default function EngagementChart({ posts, followerSnapshots = [] }: Engag
             const point: Record<string, string | number> = {
                 date: format(date, "MMM d"),
                 primary: primary.isSnapshot
-                    ? (followerByDate[dateStr] ?? 0)
+                    ? (followerValuesByDate[dateStr] ?? 0)
                     : dayPosts.reduce((sum, p) => sum + primary.getValue(p), 0),
             };
 
             if (compare) {
                 point.compare = compare.isSnapshot
-                    ? (followerByDate[dateStr] ?? 0)
+                    ? (followerValuesByDate[dateStr] ?? 0)
                     : dayPosts.reduce((sum, p) => sum + compare.getValue(p), 0);
             }
 
             return point;
         });
-    }, [posts, primaryMetric, compareMetric, selectedDays, primary, compare, followerByDate]);
+    }, [posts, primaryMetric, compareMetric, selectedDays, primary, compare, followerValuesByDate]);
 
     const tickInterval = selectedDays <= 14 ? 1 : selectedDays <= 30 ? 4 : selectedDays <= 60 ? 7 : 10;
 
@@ -221,6 +239,13 @@ export default function EngagementChart({ posts, followerSnapshots = [] }: Engag
                             </select>
                         </>
                     )}
+
+                    {primaryMetric === "followers" && !isComparing && (
+                        <div className="ml-2 flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50/50 text-blue-600 rounded-md border border-blue-100 text-[11px] font-medium">
+                            <Info className="h-3 w-3" />
+                            Historical data starts from your first sync
+                        </div>
+                    )}
                 </div>
 
                 {/* Right: time range pills */}
@@ -284,6 +309,7 @@ export default function EngagementChart({ posts, followerSnapshots = [] }: Engag
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={formatAxisValue}
+                        domain={primary.isSnapshot ? [(dataMin: number) => Math.max(0, Math.floor(dataMin * 0.95)), (dataMax: number) => Math.ceil(dataMax * 1.05)] : [0, 'auto']}
                     />
 
                     {/* Right Y-axis — Compare metric (only when comparing) */}
@@ -295,6 +321,7 @@ export default function EngagementChart({ posts, followerSnapshots = [] }: Engag
                             tickLine={false}
                             axisLine={false}
                             tickFormatter={formatAxisValue}
+                            domain={compare!.isSnapshot ? [(dataMin: number) => Math.max(0, Math.floor(dataMin * 0.95)), (dataMax: number) => Math.ceil(dataMax * 1.05)] : [0, 'auto']}
                         />
                     )}
 
