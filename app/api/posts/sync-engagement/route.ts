@@ -50,13 +50,14 @@ async function fetchPostInsights(
 async function syncUserEngagement(
     supabase: any,
     userId: string,
-    accessToken: string
+    accessToken: string,
+    autoMode: boolean = false
 ): Promise<{ synced: number; failed: number; errors: string[] }> {
     // Only fetch posts published in the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: posts, error: postsError } = await supabase
+    let query = supabase
         .from("posts")
         .select("id, platform_post_id, last_analytics_sync")
         .eq("user_id", userId)
@@ -64,6 +65,15 @@ async function syncUserEngagement(
         .eq("platform", "threads")
         .not("platform_post_id", "is", null)
         .gte("published_at", thirtyDaysAgo.toISOString());
+
+    if (autoMode) {
+        // Only get posts synced >6 hours ago or never synced
+        const sixHoursAgo = new Date();
+        sixHoursAgo.setHours(sixHoursAgo.getHours() - 6);
+        query = query.or(`last_analytics_sync.lt.${sixHoursAgo.toISOString()},last_analytics_sync.is.null`);
+    }
+
+    const { data: posts, error: postsError } = await query;
 
     if (postsError || !posts || posts.length === 0) {
         return { synced: 0, failed: 0, errors: postsError ? [postsError.message] : [] };
@@ -109,6 +119,9 @@ async function syncUserEngagement(
  */
 export async function POST(request: NextRequest) {
     try {
+        const url = new URL(request.url);
+        const auto = url.searchParams.get("auto") === "true";
+
         const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -128,31 +141,39 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "No active Threads account connected" }, { status: 404 });
         }
 
-        const result = await syncUserEngagement(supabase, user.id, account.access_token);
+        const result = await syncUserEngagement(supabase, user.id, account.access_token, auto);
 
-        // Also sync follower count snapshot
+        // Also sync follower count and profile views snapshot
         try {
-            const followerUrl = `${THREADS_API_BASE}/${account.account_id}/threads_insights?metric=followers_count&access_token=${account.access_token}`;
-            const followerRes = await fetch(followerUrl);
-            const followerData = await followerRes.json();
+            const insightUrl = `${THREADS_API_BASE}/${account.account_id}/threads_insights?metric=followers_count,views&access_token=${account.access_token}`;
+            const insightRes = await fetch(insightUrl);
+            const insightData = await insightRes.json();
 
-            if (followerRes.ok && followerData.data) {
-                let count = 0;
-                for (const item of followerData.data) {
+            if (insightRes.ok && insightData.data) {
+                let followers = 0;
+                let views = 0;
+                for (const item of insightData.data) {
                     if (item.name === "followers_count") {
-                        count = Number(item.total_value?.value ?? item.values?.[0]?.value ?? 0);
+                        followers = Number(item.total_value?.value ?? item.values?.[0]?.value ?? 0);
+                    } else if (item.name === "views") {
+                        views = Number(item.total_value?.value ?? item.values?.[0]?.value ?? 0);
                     }
                 }
                 const today = new Date().toISOString().split("T")[0];
                 await supabase
                     .from("follower_snapshots")
                     .upsert(
-                        { user_id: user.id, follower_count: count, snapshot_date: today },
+                        {
+                            user_id: user.id,
+                            follower_count: followers,
+                            profile_views: views,
+                            snapshot_date: today
+                        },
                         { onConflict: "user_id,snapshot_date" }
                     );
             }
         } catch (err: any) {
-            console.error("Failed to sync follower count:", err.message);
+            console.error("Failed to sync user stats:", err.message);
         }
 
         return NextResponse.json({

@@ -143,6 +143,18 @@ export interface Database {
                 Insert: Omit<UserPreferences, "id" | "created_at" | "updated_at">;
                 Update: Partial<Omit<UserPreferences, "id" | "created_at" | "updated_at">>;
             };
+            follower_snapshots: {
+                Row: {
+                    id: string;
+                    user_id: string;
+                    follower_count: number;
+                    profile_views: number;
+                    snapshot_date: string;
+                    created_at: string;
+                };
+                Insert: Omit<Database["public"]["Tables"]["follower_snapshots"]["Row"], "id" | "created_at">;
+                Update: Partial<Database["public"]["Tables"]["follower_snapshots"]["Row"]>;
+            };
         };
     };
 }

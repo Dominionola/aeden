@@ -157,30 +157,38 @@ export async function GET(request: NextRequest) {
             }
         }
 
-        // 4. Sync follower count snapshot
+        // 4. Sync follower count and profile views snapshot
         try {
-            const followerUrl = `${THREADS_API_BASE}/${account.account_id}/threads_insights?metric=followers_count&access_token=${account.access_token}`;
-            const followerRes = await fetch(followerUrl);
-            const followerData = await followerRes.json();
+            const insightUrl = `${THREADS_API_BASE}/${account.account_id}/threads_insights?metric=followers_count,views&access_token=${account.access_token}`;
+            const insightRes = await fetch(insightUrl);
+            const insightData = await insightRes.json();
 
-            if (followerRes.ok && followerData.data) {
-                let count = 0;
-                for (const item of followerData.data) {
+            if (insightRes.ok && insightData.data) {
+                let followers = 0;
+                let views = 0;
+                for (const item of insightData.data) {
                     if (item.name === "followers_count") {
-                        count = Number(item.total_value?.value ?? item.values?.[0]?.value ?? 0);
+                        followers = Number(item.total_value?.value ?? item.values?.[0]?.value ?? 0);
+                    } else if (item.name === "views") {
+                        views = Number(item.total_value?.value ?? item.values?.[0]?.value ?? 0);
                     }
                 }
                 const today = new Date().toISOString().split("T")[0];
                 await supabase
                     .from("follower_snapshots")
                     .upsert(
-                        { user_id: account.user_id, follower_count: count, snapshot_date: today },
+                        {
+                            user_id: account.user_id,
+                            follower_count: followers,
+                            profile_views: views,
+                            snapshot_date: today
+                        },
                         { onConflict: "user_id,snapshot_date" }
                     );
-                console.log(`⏰ Cron: Follower snapshot for user ${account.user_id}: ${count}`);
+                console.log(`⏰ Cron: Stats for user ${account.user_id}: ${followers} followers, ${views} profile views`);
             }
         } catch (err: any) {
-            console.error(`⏰ Cron: Failed to sync follower count for user ${account.user_id}:`, err.message);
+            console.error(`⏰ Cron: Failed to sync user stats for user ${account.user_id}:`, err.message);
         }
     }
 
