@@ -45,7 +45,7 @@ async function fetchPostInsights(
 /**
  * Cron Job endpoint — automatically syncs engagement for ALL users.
  * Protected by CRON_SECRET to prevent unauthorized access.
- * Called by Vercel Cron every 12 hours.
+ * Called by Vercel Cron once daily (midnight UTC).
  */
 export async function GET(request: NextRequest) {
     // Verify the request is from Vercel Cron

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const navigation = [
+export const navigation = [
     {
         name: "Dashboard",
         href: "/dashboard",
@@ -38,7 +38,7 @@ const navigation = [
     },
 ];
 
-const bottomNavigation = [
+export const bottomNavigation = [
     {
         name: "Settings",
         href: "/dashboard/settings",
