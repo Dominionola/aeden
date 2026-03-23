@@ -70,7 +70,7 @@ export function Sidebar({ isThreadsConnected = false }: { isThreadsConnected?: b
                 {/* Create Post Button */}
                 <div className="px-4 py-4">
                     <Link href="/dashboard/posts/new">
-                        <Button className="w-full gap-2 bg-blue-500 hover:bg-blue-600 shadow-sm">
+                        <Button className="w-full gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-md hover:shadow-lg transition-all duration-200 ease-out active:scale-[0.98]">
                             <Plus className="h-4 w-4" />
                             Create Post
                         </Button>
@@ -89,10 +89,10 @@ export function Sidebar({ isThreadsConnected = false }: { isThreadsConnected?: b
                                 key={item.name}
                                 href={item.href}
                                 className={cn(
-                                    "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200",
+                                    "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition-all duration-200 ease-out active:scale-[0.98]",
                                     isActive
-                                        ? "bg-blue-50 text-blue-600"
-                                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                        ? "bg-blue-50/80 text-blue-700 font-semibold shadow-[inset_4px_0_0_0_#3b82f6]"
+                                        : "text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900 hover:shadow-[inset_4px_0_0_0_#e5e7eb]"
                                 )}
                             >
                                 <Icon className={cn(
@@ -108,10 +108,10 @@ export function Sidebar({ isThreadsConnected = false }: { isThreadsConnected?: b
                     <Link
                         href="/dashboard/settings/voice"
                         className={cn(
-                            "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 mt-2",
+                            "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition-all duration-200 ease-out mt-2 active:scale-[0.98]",
                             pathname === "/dashboard/settings/voice"
-                                ? "bg-amber-50 text-amber-700"
-                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                ? "bg-amber-50/80 text-amber-700 font-semibold shadow-[inset_4px_0_0_0_#f59e0b]"
+                                : "text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900 hover:shadow-[inset_4px_0_0_0_#e5e7eb]"
                         )}
                     >
                         <Sparkles className={cn(
@@ -135,10 +135,10 @@ export function Sidebar({ isThreadsConnected = false }: { isThreadsConnected?: b
                                     key={item.name}
                                     href={item.href}
                                     className={cn(
-                                        "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200",
+                                        "flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition-all duration-200 ease-out active:scale-[0.98]",
                                         isActive
-                                            ? "bg-blue-50 text-blue-600"
-                                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                            ? "bg-blue-50/80 text-blue-700 font-semibold shadow-[inset_4px_0_0_0_#3b82f6]"
+                                            : "text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900 hover:shadow-[inset_4px_0_0_0_#e5e7eb]"
                                     )}
                                 >
                                     <Icon className={cn(

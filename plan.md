@@ -35,7 +35,7 @@
 | **Basic Analytics** | ✅ Complete | 100% | P0 |
 | **GitHub Integration** | ⏳ Not Started | 0% | P1 |
 | **Notion Integration** | ⏳ Not Started | 0% | P1 |
-| **Persona Training** | ⏳ Not Started | 0% | P1 |
+| **Persona Training** | ✅ Complete | 100% | P1 |
 
 **Overall MVP Progress: ~45%**  
 **Target MVP Launch**: 8 weeks from project start (March 15, 2026)
@@ -223,29 +223,28 @@
 
 ---
 
-## ⏳ PHASE 8: PERSONA TRAINING (PRIORITY 2)
+## ✅ PHASE 8: PERSONA TRAINING (PRIORITY 2)
 
-> **Purpose**: AI learns user's voice. Three-layer system.
+> **Purpose**: AI learns user's voice by structuring inputs and tracking progressive edits over time.
 
-### Layer 1: Quick Setup (MVP)
-- [ ] `app/dashboard/settings/voice/page.tsx`
-  - User type selector: Developer, Designer, Founder, Creator, PM, Other
-  - Tone picker: Casual, Professional, Technical, Humorous, Inspirational
-  - Save to `user_preferences`
+### Layer 1: Hybrid Persona & Scope (MVP) ✅
+- [x] `app/dashboard/settings/voice/page.tsx`
+  - **Categories**: Max 3 Primary Categories (Tech, Finance, Lifestyle, etc.)
+  - **Topics**: Combined recommendation tags + Custom Topic input
+  - **Target Audience**: Who the user is writing for (replaces User Type/Tone)
+  - **Refinement**: Free-text nuance input
+  - Save to `user_preferences` array (`categories` column)
 
-### Layer 2: Creator Bookmarks (MVP)
-- [ ] Add inspiration sources (URLs)
-- [ ] `app/api/persona/bookmark/route.ts`
-  - Save to `creator_bookmarks` JSONB
-  - Example: `[{url: "threads.net/@levelsio", username: "@levelsio", platform: "threads"}]`
-- [ ] AI prompt includes: "Blend storytelling patterns from @levelsio..."
+### Layer 2: Progressive Learning (MVP) ✅
+- [x] `post_edits` Database Table
+  - Track `original_ai_text` vs `user_edited_text`
+  - Establish audit log of AI vs Human revisions
 
-### Layer 3: Voice Analysis (V1.5)
+### Layer 3: Pattern Extraction & Voice Analysis (V1.5) ⏳
 - [ ] `app/api/persona/analyze/route.ts`
-  - User uploads past 50 posts
-  - Claude analyzes: tone, sentence length, emoji usage, patterns
-  - Save to `voice_analysis` JSONB
-  - AI matches exactly
+  - Extract stylistic patterns dynamically from `post_edits` differences
+  - Claude analyzes tone, sentence length, emoji usage, structural patterns
+  - Save pattern definitions to `voice_analysis` JSONB to guide future generations
 
 ### Brand Guidelines (For Teams - V1.5)
 - [ ] Textarea: "Always use 'we', max 2 emojis, must mention product name"
@@ -310,7 +309,7 @@ NOTION_CLIENT_SECRET=
 | Threads publishing | ⏳ 0% | Week 4-5 |
 | Basic analytics | ⏳ 0% | Week 7 |
 | Engagement sync | ⏳ 0% | Week 7 |
-| Tone selector (basic persona) | ✅ Done | Week 7 |
+| Hybrid Persona & Edit Tracking | ✅ Done | Week 7 |
 
 ### 📦 SHOULD HAVE (P1 - Week 5-8)
 - GitHub integration (optional)
@@ -360,7 +359,7 @@ Week 6: Notion Integration (OPTIONAL)
 Week 7: Polish & Analytics
 - Engagement sync
 - Basic analytics dashboard
-- Persona settings (tone + bookmarks)
+- Persona MVP (Hybrid Profile & Edit Tracking) ✅
 
 Week 8: Testing & Launch
 - End-to-end testing

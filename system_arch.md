@@ -199,6 +199,19 @@ export function PostCard({ post, onEdit }: PostCardProps) {
 
 ---
 
+## Progressive Learning Architecture (V1.5+)
+
+Aeden uses a **Hybrid Pattern Extraction + RAG** approach to continuously learn user personas without expensive fine-tuning.
+
+1. **Edit Tracking (MVP)**: Every modification a user makes to AI-generated text is captured and scored (e.g., made shorter, removed emojis) and stored in the `post_edits` table.
+2. **Pattern Extraction**: After a set number of posts, a background job uses Claude to analyze high-performing posts to extract absolute writing rules (e.g., "Uses 2 emojis max, always hooks with a question"). These rules are saved as JSON in `user_preferences`.
+3. **RAG (Retrieval-Augmented Generation)**: 
+   - Uses Supabase `pgvector` to store vector embeddings of published posts.
+   - When generating a new post, semantic search retrieves the top 3 most relevant prior posts.
+   - These retrieved posts are injected into the context window as few-shot examples alongside the extracted patterns to perfectly match the user's implicit style.
+
+---
+
 ## API Design
 
 ### Route Handler Pattern
@@ -318,15 +331,17 @@ This specific order ensures dependencies (tables exist before policies/triggers)
               │ comments    │
               └─────────────┘
                      │
-              ┌──────▼──────────┐
-              │ user_preferences│
-              │─────────────────│
-              │ user_id (FK)    │
-              │ user_type       │
-              │ tone            │
-              │ creator_bookmarks│
-              │ brand_guidelines │
-              └─────────────────┘
+              ┌──────┴──────────┐
+              │                 │
+       ┌──────▼──────────┐ ┌────▼──────────┐
+       │ user_preferences│ │   post_edits  │
+       │─────────────────│ │───────────────│
+       │ user_id (FK)    │ │ post_id (FK)  │
+       │ category        │ │ original_ai...│
+       │ topics          │ │ user_edited...│
+       │ refinement      │ │ changes (JSON)│
+       │ ai_context      │ └───────────────┘
+       └─────────────────┘
 ```
 
 ### Row Level Security (RLS)

@@ -46,7 +46,7 @@ export default async function DashboardPage() {
                     <p className="text-gray-500 mt-1">Ready to share what you&apos;ve been building?</p>
                 </div>
                 <Link href="/dashboard/posts/new">
-                    <Button size="lg" className="gap-2 bg-blue-500 hover:bg-blue-600 shadow-lg shadow-blue-500/25">
+                    <Button size="lg" className="gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-md hover:shadow-lg transition-all duration-200 ease-out active:scale-[0.98]">
                         <Plus className="h-5 w-5" />
                         Create Post
                     </Button>
@@ -155,9 +155,9 @@ export default async function DashboardPage() {
                         </CardHeader>
                         <CardContent className="space-y-2">
                             <Link href="/dashboard/posts/new" className="block">
-                                <button className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-50 transition-colors group">
-                                    <div className="p-2 rounded-lg bg-blue-50 group-hover:bg-blue-100 transition-colors">
-                                        <Plus className="h-4 w-4 text-blue-500" />
+                                <button className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-50 transition-all duration-200 ease-out hover:shadow-sm active:scale-[0.98] group">
+                                    <div className="p-2 rounded-lg bg-blue-50 group-hover:bg-blue-500 group-hover:shadow-md group-hover:shadow-blue-500/20 transition-all duration-200">
+                                        <Plus className="h-4 w-4 text-blue-500 group-hover:text-white transition-colors duration-200" />
                                     </div>
                                     <div>
                                         <div className="font-medium text-gray-900 text-sm">New Post</div>
@@ -166,9 +166,9 @@ export default async function DashboardPage() {
                                 </button>
                             </Link>
                             <Link href="/dashboard/sources" className="block">
-                                <button className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-50 transition-colors group">
-                                    <div className="p-2 rounded-lg bg-violet-50 group-hover:bg-violet-100 transition-colors">
-                                        <Link2 className="h-4 w-4 text-violet-500" />
+                                <button className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-50 transition-all duration-200 ease-out hover:shadow-sm active:scale-[0.98] group">
+                                    <div className="p-2 rounded-lg bg-violet-50 group-hover:bg-violet-500 group-hover:shadow-md group-hover:shadow-violet-500/20 transition-all duration-200">
+                                        <Link2 className="h-4 w-4 text-violet-500 group-hover:text-white transition-colors duration-200" />
                                     </div>
                                     <div>
                                         <div className="font-medium text-gray-900 text-sm">Connect Source</div>
@@ -177,9 +177,9 @@ export default async function DashboardPage() {
                                 </button>
                             </Link>
                             <Link href="/dashboard/settings/voice" className="block">
-                                <button className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-50 transition-colors group">
-                                    <div className="p-2 rounded-lg bg-amber-50 group-hover:bg-amber-100 transition-colors">
-                                        <Sparkles className="h-4 w-4 text-amber-500" />
+                                <button className="w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-gray-50 transition-all duration-200 ease-out hover:shadow-sm active:scale-[0.98] group">
+                                    <div className="p-2 rounded-lg bg-amber-50 group-hover:bg-amber-500 group-hover:shadow-md group-hover:shadow-amber-500/20 transition-all duration-200">
+                                        <Sparkles className="h-4 w-4 text-amber-500 group-hover:text-white transition-colors duration-200" />
                                     </div>
                                     <div>
                                         <div className="font-medium text-gray-900 text-sm">Train Your Voice</div>

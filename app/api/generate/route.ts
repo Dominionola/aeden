@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { input, model, tone, archetype, creatorBookmarks, brandGuidelines } = body;
+        const { input, archetype, creatorBookmarks, brandGuidelines } = body;
 
         if (!input) {
             return NextResponse.json({ error: "Input is required" }, { status: 400 });
@@ -22,18 +22,19 @@ export async function POST(request: NextRequest) {
         // In a real flow, we might fetch this from DB here if the FE didn't send it
         const { data: prefs } = await supabase
             .from('user_preferences')
-            .select('voice_analysis, tone, preferred_ai_model')
+            .select('voice_analysis, ai_context, brand_guidelines')
             .eq('user_id', user.id)
             .single();
 
         const options: GenerateOptions = {
             input,
-            tone: tone || prefs?.tone || 'casual',
-            model: (model as AiModel) || prefs?.preferred_ai_model || 'gemini',
+            tone: 'casual', // default ignored placeholder
+            model: 'gemini', // default since model selection is removed
             archetype,
             voiceAnalysis: prefs?.voice_analysis,
+            aiContext: prefs?.ai_context,
             creatorBookmarks,
-            brandGuidelines,
+            brandGuidelines: brandGuidelines || prefs?.brand_guidelines,
         };
 
         const content = await generate(options);

@@ -20,10 +20,8 @@ interface PostEditorProps {
 export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
     const [input, setInput] = useState("");
     const [generatedContent, setGeneratedContent] = useState(initialContent);
+    const [originalAiText, setOriginalAiText] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
-    const [model, setModel] = useState("gemini");
-    const [tone, setTone] = useState("casual");
-    const [archetype, setArchetype] = useState("observer");
     const router = useRouter();
 
     const [isPublishing, setIsPublishing] = useState(false);
@@ -38,9 +36,6 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     input,
-                    model,
-                    tone,
-                    archetype,
                 }),
             });
 
@@ -48,6 +43,7 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
 
             const data = await response.json();
             setGeneratedContent(data.content);
+            setOriginalAiText(data.content);
             toast.success("Post generated!");
         } catch (error) {
             toast.error("Failed to generate post");
@@ -84,7 +80,6 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                 .update({
                     content: generatedContent,
                     status: dbStatus,
-                    ai_model_version: model,
                     updated_at: new Date().toISOString(),
                 })
                 .eq("id", currentPostId)
@@ -98,7 +93,6 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                     content: generatedContent,
                     user_id: user.id,
                     status: dbStatus,
-                    ai_model_version: model,
                     source_type: "manual",
                 })
                 .select("id")
@@ -116,6 +110,20 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
             toast.error("Failed to auto-save post");
             console.error(error);
             return null;
+        }
+
+        // Progressive Learning: Save edit tracking
+        if (originalAiText && generatedContent !== originalAiText) {
+            const { error: editError } = await supabase.from("post_edits").insert({
+                post_id: currentPostId,
+                original_ai_text: originalAiText,
+                user_edited_text: generatedContent,
+                changes: { modified: true, length_diff: generatedContent.length - originalAiText.length }
+            });
+            if (!editError) {
+                // Reset to avoid duplicate diff tracking on subsequent saves
+                setOriginalAiText(generatedContent);
+            }
         }
 
         return currentPostId;
@@ -201,69 +209,10 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                             onChange={(e) => setInput(e.target.value)}
                         />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>AI Model</Label>
-                            <Select value={model} onValueChange={setModel}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="gemini">Gemini 2.0 Flash</SelectItem>
-                                    <SelectItem value="claude">Claude Sonnet</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Tone</Label>
-                            <Select value={tone} onValueChange={setTone}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="casual">Casual</SelectItem>
-                                    <SelectItem value="professional">Professional</SelectItem>
-                                    <SelectItem value="technical">Technical</SelectItem>
-                                    <SelectItem value="humorous">Humorous</SelectItem>
-                                    <SelectItem value="inspirational">Inspirational</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label>Viral Archetype</Label>
-                        <Select value={archetype} onValueChange={setArchetype}>
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="observer">
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">The Patient Observer</span>
-                                        <span className="text-xs text-muted-foreground">Validates struggle, builds hope</span>
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="prophet">
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">The Dramatic Prophet</span>
-                                        <span className="text-xs text-muted-foreground">Commands transformation, intense</span>
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="devastator">
-                                    <div className="flex flex-col">
-                                        <span className="font-medium">The Quiet Devastator</span>
-                                        <span className="text-xs text-muted-foreground">Ironic, haunting observations</span>
-                                    </div>
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
                 </CardContent>
                 <CardFooter>
                     <Button
-                        className="w-full"
+                        className="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-md hover:shadow-lg transition-all duration-200 ease-out active:scale-[0.98]"
                         size="lg"
                         onClick={handleGenerate}
                         disabled={isGenerating || !input.trim()}

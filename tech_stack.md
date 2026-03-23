@@ -22,7 +22,7 @@
 
 ## 3. Backend & Database
 - **BaaS:** [Supabase](https://supabase.com)
-  - Database: PostgreSQL
+  - Database: PostgreSQL (with `pgvector` extension for RAG)
   - Auth: Supabase Auth (GitHub, Email)
   - Storage: Supabase Storage
 - **Client Libraries:**
@@ -30,9 +30,12 @@
   - `@supabase/ssr` - Server-side cookie handling
 
 ## 4. AI & Intelligence
-- **LLM Provider:** [Anthropic](https://www.anthropic.com)
-- **Model:** Claude 3.5 Sonnet (referred to as Sonnet 4 in SOP)
-- **SDK:** `@anthropic-ai/sdk`
+- **Providers:** [Anthropic](https://www.anthropic.com) and [Google](https://ai.google.dev/)
+- **Models:**
+  - Claude 3.5 Sonnet (referred to as Sonnet 4 in SOP) - Persona Extraction & High-Quality Generation
+  - Gemini 2.0 Flash - Standard Fast Generation
+  - text-embedding-004 (Google AI) - Vector Embeddings for RAG
+- **SDKs:** `@anthropic-ai/sdk`, `@google/generative-ai`
 
 ## 5. Third-Party Integrations (APIs)
 - **Meta Threads:** Threads API (v1.0)

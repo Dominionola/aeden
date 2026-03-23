@@ -9,6 +9,7 @@ export interface GenerateOptions {
     tone: string;
     model?: AiModel;
     archetype?: AiArchetype;
+    aiContext?: string | null;
     voiceAnalysis?: {
         tone: string;
         characteristics: string[];

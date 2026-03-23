@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ARC_PROMPTS, getSystemPrompt, getUserPrompt } from "./prompts";
+import { getSystemPrompt, getUserPrompt } from "./prompts";
 import { type AiArchetype } from "./client";
 
 export interface GeminiGenerateOptions {
@@ -18,6 +18,7 @@ export interface GeminiGenerateOptions {
     creatorBookmarks?: Array<{ username: string }>;
     brandGuidelines?: string;
     maxTokens?: number;
+    aiContext?: string | null;
 }
 
 function getClient() {
@@ -33,8 +34,8 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
     const {
         input,
         tone,
-        archetype = 'observer',
         voiceAnalysis,
+        aiContext,
         creatorBookmarks,
         brandGuidelines,
         maxTokens = 1000
@@ -58,15 +59,10 @@ Match this voice exactly while adopting the selected archetype.`;
         personaContext += `\n\nStyle inspiration (blend elements from):
 ${creatorBookmarks.map((c) => `- ${c.username}'s storytelling approach`).join("\n")}
 
-Study their patterns but maintain the user's authentic voice and the archetype's structure.`;
+Study their patterns but maintain the user's authentic voice and the template's structure.`;
     }
 
-    if (brandGuidelines) {
-        personaContext += `\n\nBrand guidelines (MUST follow):
-${brandGuidelines}`;
-    }
-
-    const systemPrompt = getSystemPrompt(archetype);
+    const systemPrompt = getSystemPrompt(aiContext, brandGuidelines, personaContext);
     const userPrompt = getUserPrompt(input, tone);
 
     const model = genAI.getGenerativeModel({

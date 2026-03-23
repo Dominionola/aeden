@@ -18,6 +18,54 @@
 
 ## Session Log
 
+### March 23, 2026 - Multi-Category Persona Expansion
+
+**What was done:**
+- Researched and expanded Primary Categories to include *Finance & Wealth*, *Health & Wellness*, and *Lifestyle & Personal*
+- Upgraded the Voice & Persona schema to support multiple `categories` (JSON array) and migrated old string values
+- Refactored the UI to allow creators to select up to 3 Primary Categories simultaneously
+- Combined the 'Specific Topics' tags intelligently from all selected categories
+- Implemented a "Custom Topic" input field allowing users to define their exact niches
+- Updated API routes and Typescript interfaces for array persistence
+
+**Files modified:**
+- `supabase/migrations/011_multiple_categories.sql`
+- `types/database.ts`
+- `app/api/user/preferences/route.ts`
+- `components/dashboard/settings/voice-form.tsx`
+
+**Status:**
+- Multi-Category Support ✅ Complete
+- Ready to leverage robust niche definitions in Prompt Generation
+
+---
+
+### March 22, 2026 - Persona Training & Progressive Learning MVP
+
+**What was done:**
+- Created Hybrid Persona Input system (Categories, Topics, Refinements)
+- Built 4 AI Generation Templates (Story Arc, How-To, Metrics, Contrarian)
+- Injected templates and hybrid persona context into Prompt Generation
+- Implemented "Edit Tracking" functionality to diff original AI generations vs user edits
+- Applied Supabase migrations to support tracking and persona updates
+- Refactored Next.js API Routes and Claude/Gemini AI integrations
+
+**Files modified:**
+- `supabase/migrations/009_persona_and_tracking.sql`
+- `types/database.ts`
+- `app/api/user/preferences/route.ts`
+- `components/dashboard/settings/voice-form.tsx`
+- `lib/ai/templates.ts`, `lib/ai/prompts.ts`, `lib/ai/client.ts`
+- `lib/ai/google.ts`, `lib/ai/anthropic.ts`
+- `app/api/generate/route.ts`, `app/api/posts/route.ts`
+- `components/dashboard/post-editor.tsx`
+
+**Status:**
+- Persona Training MVP ✅ Complete
+- Ready for V1.5 Pattern Extraction & RAG
+
+---
+
 ### February 10, 2026 - Testing Infrastructure Setup
 
 **What was done:**

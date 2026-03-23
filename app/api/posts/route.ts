@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { content, image_url, tone } = body;
+        const { content, image_url, tone, original_ai_text } = body;
 
         // Basic validation
         if (!content) {
@@ -42,6 +42,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Failed to create post" }, { status: 500 });
         }
 
+        if (original_ai_text && content !== original_ai_text) {
+             await supabase.from("post_edits").insert({
+                 post_id: data.id,
+                 original_ai_text,
+                 user_edited_text: content,
+                 changes: { modified: true, length_diff: content.length - original_ai_text.length }
+             });
+        }
+
         return NextResponse.json(data);
     } catch (error) {
         console.error("Create post route error:", error);
@@ -61,7 +70,7 @@ export async function PUT(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { id, content, image_url, status } = body;
+        const { id, content, image_url, status, original_ai_text } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
@@ -88,6 +97,16 @@ export async function PUT(request: NextRequest) {
             }
             return NextResponse.json({ error: "Failed to update post" }, { status: 500 });
         }
+
+        if (original_ai_text && content !== original_ai_text) {
+             await supabase.from("post_edits").insert({
+                 post_id: id,
+                 original_ai_text,
+                 user_edited_text: content,
+                 changes: { modified: true, length_diff: content.length - original_ai_text.length }
+             });
+        }
+
         return NextResponse.json(data);
     } catch (error) {
         console.error("Update post route error:", error);

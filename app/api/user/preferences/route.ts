@@ -10,16 +10,22 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { user_type, tone, preferred_ai_model, brand_guidelines } = body;
+    const { user_type, brand_guidelines, target_audience, categories, topics, refinement, ai_context } = body;
 
     const { error } = await supabase
         .from("user_preferences")
         .upsert({
             user_id: user.id,
             user_type: user_type ?? "developer",
-            tone: tone ?? "casual",
-            preferred_ai_model: preferred_ai_model ?? "gemini",
             brand_guidelines: brand_guidelines ?? null,
+            target_audience: target_audience ?? null,
+            categories: categories ?? [],
+            topics: topics ?? [],
+            refinement: refinement ?? null,
+            ai_context: ai_context ?? null,
+            // Keep defaults to satisfy old DB constraints
+            tone: "casual",
+            preferred_ai_model: "gemini",
             updated_at: new Date().toISOString(),
         }, {
             onConflict: "user_id",

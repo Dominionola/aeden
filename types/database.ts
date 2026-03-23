@@ -80,6 +80,11 @@ export interface Post {
 export interface UserPreferences {
     id: string;
     user_id: string;
+    categories: string[] | null;
+    topics: string[];
+    refinement: string | null;
+    target_audience: string | null;
+    ai_context: string | null;
     user_type:
     | "developer"
     | "designer"
@@ -119,6 +124,16 @@ export interface VoiceAnalysis {
     voice_summary: string;
 }
 
+export interface PostEdit {
+    id: string;
+    post_id: string;
+    original_ai_text: string;
+    user_edited_text: string;
+    changes: Record<string, boolean>;
+    created_at: string;
+    updated_at: string;
+}
+
 // Supabase Database type for type-safe queries
 export interface Database {
     public: {
@@ -142,6 +157,11 @@ export interface Database {
                 Row: UserPreferences;
                 Insert: Omit<UserPreferences, "id" | "created_at" | "updated_at">;
                 Update: Partial<Omit<UserPreferences, "id" | "created_at" | "updated_at">>;
+            };
+            post_edits: {
+                Row: PostEdit;
+                Insert: Omit<PostEdit, "id" | "created_at" | "updated_at">;
+                Update: Partial<Omit<PostEdit, "id" | "created_at" | "updated_at">>;
             };
             follower_snapshots: {
                 Row: {
