@@ -203,8 +203,8 @@ export function PostCard({ post, onEdit }: PostCardProps) {
 
 Aeden uses a **Hybrid Pattern Extraction + RAG** approach to continuously learn user personas without expensive fine-tuning.
 
-1. **Edit Tracking (MVP)**: Every modification a user makes to AI-generated text is captured and scored (e.g., made shorter, removed emojis) and stored in the `post_edits` table.
-2. **Pattern Extraction**: After a set number of posts, a background job uses Claude to analyze high-performing posts to extract absolute writing rules (e.g., "Uses 2 emojis max, always hooks with a question"). These rules are saved as JSON in `user_preferences`.
+1. **Edit Tracking (MVP)**: Every modification a user makes to AI-generated text is captured and stored in the `post_edits` table. *Scoring Mechanism:* Edits are scored using Levenshtein distance to measure the magnitude of intervention, alongside heuristic checks for specific formatting transformations (e.g., `emoji_delta`, `length_delta`, `hashtag_delta`, `line_break_changes`).
+2. **Pattern Extraction**: *Thresholds:* Triggered via a background cron job after every 10 newly published posts that have accumulated at least 24 hours of engagement data. *Criteria:* A background job uses Claude to analyze "high-performing posts" (defined as posts achieving an engagement rate—likes + comments / impressions—in the top 25th percentile of the user's history, or >2% absolute engagement) to extract absolute writing rules. These rules are saved as JSON in `user_preferences`.
 3. **RAG (Retrieval-Augmented Generation)**: 
    - Uses Supabase `pgvector` to store vector embeddings of published posts.
    - When generating a new post, semantic search retrieves the top 3 most relevant prior posts.

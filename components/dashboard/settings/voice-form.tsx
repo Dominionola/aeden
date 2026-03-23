@@ -93,11 +93,11 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                     ? categories.map(c => CATEGORIES.find(cat => cat.id === c)?.label).filter(Boolean).join(", ")
                     : "Creator";
                 const topicsLabel = topics.length > 0 ? topics.join(" and ") : "general topics";
-                const audienceLabel = targetAudience ? `writing to ${targetAudience}` : "";
+                const audienceLabel = targetAudience ? ` writing to ${targetAudience}` : "";
                 const refinementLabel = refinement ? ` (${refinement})` : "";
-                
+
                 // e.g., "Creator writing to Indie hackers focusing on AI and SEO (expert tone)."
-                const generatedContext = `${categoryLabels} ${audienceLabel} focusing on ${topicsLabel}${refinementLabel}.`;
+                const generatedContext = `${categoryLabels}${audienceLabel} focusing on ${topicsLabel}${refinementLabel}.`;
 
                 const res = await fetch("/api/user/preferences", {
                     method: "PATCH",
@@ -155,17 +155,17 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                                 }}
                                 className={cn(
                                     "cursor-pointer transition-all duration-200 ease-out active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
-                                    isSelected 
-                                        ? "border-2 border-primary-500 bg-primary-50 shadow-md -translate-y-1" 
+                                    isSelected
+                                        ? "border-2 border-primary-500 bg-primary-50 shadow-md -translate-y-1"
                                         : "border border-gray-200 hover:border-primary-300 hover:shadow-md hover:-translate-y-1 bg-white"
                                 )}
                                 onClick={() => handleSetCategory(cat.id)}
                             >
                                 <CardContent className="p-5 flex flex-col items-center justify-center text-center space-y-3">
                                     <div className={cn(
-                                        "p-3 rounded-2xl transition-colors duration-200", 
-                                        isSelected 
-                                            ? "bg-primary-500 text-white shadow-md shadow-primary-500/30" 
+                                        "p-3 rounded-2xl transition-colors duration-200",
+                                        isSelected
+                                            ? "bg-primary-500 text-white shadow-md shadow-primary-500/30"
                                             : "bg-gray-50 text-gray-500 group-hover:bg-primary-50 group-hover:text-primary-500"
                                     )}>
                                         <Icon className="w-6 h-6 stroke-[1.5]" />
@@ -184,12 +184,12 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                     <h3 className="text-lg font-semibold text-gray-900">2. Specific Topics</h3>
                     <p className="text-sm text-muted-foreground">Select or add the key topics you usually post about.</p>
                 </div>
-                
+
                 <div className="p-5 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-4">
                     {categories.length === 0 && topics.length === 0 && (
                         <p className="text-sm text-gray-500 italic">Select a category above to see recommended topics, or add your own below.</p>
                     )}
-                    
+
                     {allDisplayTopics.length > 0 && (
                         <div className="flex flex-wrap gap-2.5">
                             {allDisplayTopics.map((topic) => {
@@ -209,8 +209,8 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                                         }}
                                         className={cn(
                                             "cursor-pointer text-sm font-medium py-1.5 px-4 rounded-full transition-all duration-200 ease-out active:scale-95 hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 select-none",
-                                            isSelected 
-                                                ? "bg-primary-500 text-white hover:bg-primary-600 hover:shadow-md shadow-primary-500/25 border-transparent" 
+                                            isSelected
+                                                ? "bg-primary-500 text-white hover:bg-primary-600 hover:shadow-md shadow-primary-500/25 border-transparent"
                                                 : "bg-white text-gray-700 border border-gray-200 shadow-sm hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700"
                                         )}
                                         onClick={() => handleToggleTopic(topic)}
@@ -223,8 +223,8 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                     )}
 
                     <div className="flex gap-2 pt-2 items-center">
-                        <Input 
-                            placeholder="Add custom topic..." 
+                        <Input
+                            placeholder="Add custom topic..."
                             value={customTopic}
                             onChange={e => setCustomTopic(e.target.value)}
                             onKeyDown={e => {
@@ -235,9 +235,9 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                             }}
                             className="max-w-[240px] border-gray-200 focus:ring-primary-500/20 focus:border-primary-500"
                         />
-                        <Button 
-                            type="button" 
-                            variant="secondary" 
+                        <Button
+                            type="button"
+                            variant="secondary"
                             onClick={handleAddCustomTopic}
                             className="text-gray-700"
                         >

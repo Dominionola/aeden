@@ -40,7 +40,7 @@ Use this proven '${template.name}' structure (avg ${template.avg_engagement} lik
 ${structureStr}
 
 Generate the post following this EXACT structure. 
-Word count: 150-250 characters for Threads.
+Length: 150-250 characters for Threads.
 Reflect the user's identity and tone.
 `;
 }

@@ -9,9 +9,13 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
     const { user_type, brand_guidelines, target_audience, categories, topics, refinement, ai_context } = body;
-
     const { error } = await supabase
         .from("user_preferences")
         .upsert({

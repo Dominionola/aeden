@@ -43,14 +43,16 @@ export async function POST(request: NextRequest) {
         }
 
         if (original_ai_text && content !== original_ai_text) {
-             await supabase.from("post_edits").insert({
-                 post_id: data.id,
-                 original_ai_text,
-                 user_edited_text: content,
-                 changes: { modified: true, length_diff: content.length - original_ai_text.length }
-             });
+            const { error: editError } = await supabase.from("post_edits").insert({
+                post_id: data.id,
+                original_ai_text,
+                user_edited_text: content,
+                changes: { modified: true, length_diff: content.length - original_ai_text.length }
+            });
+            if (editError) {
+                console.error("Failed to record post edit:", editError);
+            }
         }
-
         return NextResponse.json(data);
     } catch (error) {
         console.error("Create post route error:", error);
@@ -98,15 +100,17 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: "Failed to update post" }, { status: 500 });
         }
 
-        if (original_ai_text && content !== original_ai_text) {
-             await supabase.from("post_edits").insert({
-                 post_id: id,
-                 original_ai_text,
-                 user_edited_text: content,
-                 changes: { modified: true, length_diff: content.length - original_ai_text.length }
-             });
+        if (original_ai_text && content && content !== original_ai_text) {
+            const { error: editError } = await supabase.from("post_edits").insert({
+                post_id: id,
+                original_ai_text,
+                user_edited_text: content,
+                changes: { modified: true, length_diff: content.length - original_ai_text.length }
+            });
+            if (editError) {
+                console.error("Failed to record post edit:", editError);
+            }
         }
-
         return NextResponse.json(data);
     } catch (error) {
         console.error("Update post route error:", error);
