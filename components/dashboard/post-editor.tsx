@@ -11,6 +11,7 @@ import { Loader2, Sparkles, Send, Save, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 interface PostEditorProps {
     initialContent?: string;
