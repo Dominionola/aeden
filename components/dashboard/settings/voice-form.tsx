@@ -1,18 +1,26 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, Save, Code, Palette, Briefcase, Video, Layers, TrendingUp, Landmark, Heart, Coffee } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Sparkles, Save, Code, Palette, Briefcase, Video, Layers, TrendingUp, Landmark, Heart, Coffee, Loader2, RefreshCw, BrainCircuit, Type, FileText, ChevronDown, ChevronUp, Settings2, MessageSquare, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 const CATEGORIES = [
     { id: "tech", label: "Tech & Development", icon: Code },
@@ -38,6 +46,19 @@ const TOPICS_BY_CATEGORY: Record<string, string[]> = {
     lifestyle: ["Productivity", "Travel", "Self-Improvement", "Digital Nomad", "Habits", "Photography"],
 };
 
+const TONES = [
+    { id: "casual", label: "Casual", description: "Friendly, conversational" },
+    { id: "professional", label: "Professional", description: "Polished, business-ready" },
+    { id: "technical", label: "Technical", description: "In-depth, developer-focused" },
+    { id: "humorous", label: "Humorous", description: "Witty, playful" },
+    { id: "inspirational", label: "Inspirational", description: "Motivating, uplifting" },
+] as const;
+
+const AI_MODELS = [
+    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", description: "Fast, efficient" },
+    { id: "claude-3.5-sonnet", label: "Claude 3.5 Sonnet", description: "Thoughtful, detailed" },
+] as const;
+
 interface VoiceFormProps {
     initialPrefs: {
         categories: string[] | null;
@@ -45,6 +66,19 @@ interface VoiceFormProps {
         target_audience: string | null;
         refinement: string | null;
         brand_guidelines: string | null;
+        auto_learn_persona?: boolean;
+        voice_analysis?: {
+            tone: string;
+            characteristics: string[];
+            voice_summary: string;
+            common_patterns?: {
+                sentence_length?: string;
+                emoji_usage?: string;
+                line_breaks?: string;
+            };
+        } | null;
+        tone?: string;
+        preferred_ai_model?: string;
     };
 }
 
@@ -58,6 +92,18 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
     const [targetAudience, setTargetAudience] = useState(initialPrefs.target_audience || "");
     const [refinement, setRefinement] = useState(initialPrefs.refinement || "");
     const [brandGuidelines, setBrandGuidelines] = useState(initialPrefs.brand_guidelines || "");
+    const [autoLearn, setAutoLearn] = useState(initialPrefs.auto_learn_persona !== false);
+    const [voiceAnalysis, setVoiceAnalysis] = useState(initialPrefs.voice_analysis || null);
+    const [tone, setTone] = useState(initialPrefs.tone || "professional");
+    const [preferredAiModel, setPreferredAiModel] = useState(initialPrefs.preferred_ai_model || "gemini-2.0-flash");
+    
+    // Playground State
+    const [isSaved, setIsSaved] = useState(!!voiceAnalysis || (initialPrefs.categories && initialPrefs.categories.length > 0));
+    const [playgroundInput, setPlaygroundInput] = useState("");
+    const [playgroundOutput, setPlaygroundOutput] = useState("");
+    const [isGeneratingPlayground, setIsGeneratingPlayground] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isFormExpanded, setIsFormExpanded] = useState(!isSaved);
 
     const handleToggleTopic = (topic: string) => {
         setTopics((prev) =>
@@ -86,6 +132,7 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
     };
 
     const handleSave = async () => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
         startTransition(async () => {
             try {
                 // Compile the ai_context based on structured data
@@ -96,7 +143,6 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                 const audienceLabel = targetAudience ? ` writing to ${targetAudience}` : "";
                 const refinementLabel = refinement ? ` (${refinement})` : "";
 
-                // e.g., "Creator writing to Indie hackers focusing on AI and SEO (expert tone)."
                 const generatedContext = `${categoryLabels}${audienceLabel} focusing on ${topicsLabel}${refinementLabel}.`;
 
                 const res = await fetch("/api/user/preferences", {
@@ -109,6 +155,9 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                         refinement,
                         ai_context: generatedContext,
                         brand_guidelines: brandGuidelines || null,
+                        auto_learn_persona: autoLearn,
+                        tone,
+                        preferred_ai_model: preferredAiModel,
                     }),
                 });
 
@@ -118,11 +167,73 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                 }
 
                 toast.success("Voice & Persona saved!");
+                setIsSaved(true);
+                setIsFormExpanded(false);
                 router.refresh();
+                
+                setTimeout(() => {
+                    router.push("/dashboard");
+                }, 1500);
             } catch (err: any) {
                 toast.error("Failed to save", { description: err.message });
             }
         });
+    };
+
+    const handleRunAnalysis = async () => {
+        setIsAnalyzing(true);
+        try {
+            const res = await fetch("/api/persona/analyze", { method: "POST" });
+            const data = await res.json();
+            
+            if (!res.ok) {
+                if (res.status === 400 && data.error === "Insufficient data") {
+                    toast.info("Need more data", { description: data.message });
+                } else {
+                    throw new Error(data.message || data.error || "Failed to analyze");
+                }
+                return;
+            }
+
+            setVoiceAnalysis(data.analysis);
+            toast.success("AI Persona updated!");
+            router.refresh();
+        } catch (err: any) {
+            toast.error("Analysis failed", { description: err.message });
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    const [strategy, setStrategy] = useState<any>(null);
+    useEffect(() => {
+        if (isSaved) {
+            fetch("/api/persona/strategy").then(r => r.json()).then(d => setStrategy(d.strategy));
+        }
+    }, [isSaved]);
+
+    const handleTestPlayground = async () => {
+        if (!playgroundInput.trim()) return;
+        setIsGeneratingPlayground(true);
+        try {
+            const res = await fetch("/api/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    input: playgroundInput,
+                    tone,
+                    preferred_ai_model: preferredAiModel,
+                }),
+            });
+            if (!res.ok) throw new Error("Generation failed");
+            const data = await res.json();
+            setPlaygroundOutput(data.content);
+            toast.success("Generated test post!");
+        } catch (error) {
+            toast.error("Failed to generate test post");
+        } finally {
+            setIsGeneratingPlayground(false);
+        }
     };
 
     const predefinedTopics = categories.flatMap(cat => TOPICS_BY_CATEGORY[cat] || []);
@@ -130,191 +241,334 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
     const allDisplayTopics = Array.from(new Set([...predefinedTopics, ...customTopicsList]));
 
     return (
-        <div className="space-y-8 pb-10">
-            {/* Step 1: Category */}
-            <div className="space-y-4">
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-900">1. Primary Categories (Max 3)</h3>
-                    <p className="text-sm text-muted-foreground">Select the areas that best describe your work.</p>
+        <div className="space-y-8 pb-10 relative">
+            {/* Loading Overlay */}
+            {isPending && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/60 backdrop-blur-sm rounded-xl">
+                    <Loader2 className="h-10 w-10 text-primary-600 animate-spin mb-4" />
+                    <h2 className="text-xl font-bold text-gray-900 animate-pulse">Compiling Your Persona...</h2>
+                    <p className="text-sm text-gray-500 mt-2">Saving preferences and updating AI context</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {CATEGORIES.map((cat) => {
-                        const Icon = cat.icon;
-                        const isSelected = categories.includes(cat.id);
-                        return (
-                            <Card
-                                key={cat.id}
-                                role="button"
-                                tabIndex={0}
-                                aria-pressed={isSelected}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        handleSetCategory(cat.id);
-                                    }
-                                }}
-                                className={cn(
-                                    "cursor-pointer transition-all duration-200 ease-out active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2",
-                                    isSelected
-                                        ? "border-2 border-primary-500 bg-primary-50 shadow-md -translate-y-1"
-                                        : "border border-gray-200 hover:border-primary-300 hover:shadow-md hover:-translate-y-1 bg-white"
-                                )}
-                                onClick={() => handleSetCategory(cat.id)}
+            )}
+
+            {/* AI Voice Analysis Section */}
+            {voiceAnalysis && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-700">
+                    <Card className="border-none bg-gradient-to-br from-primary-600/10 via-primary-500/5 to-transparent shadow-sm overflow-hidden relative group">
+                        <div className="absolute top-0 right-0 p-4">
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={handleRunAnalysis}
+                                disabled={isAnalyzing}
+                                className="text-primary-600 hover:text-primary-700 hover:bg-white/50 gap-2"
                             >
-                                <CardContent className="p-5 flex flex-col items-center justify-center text-center space-y-3">
-                                    <div className={cn(
-                                        "p-3 rounded-2xl transition-colors duration-200",
-                                        isSelected
-                                            ? "bg-primary-500 text-white shadow-md shadow-primary-500/30"
-                                            : "bg-gray-50 text-gray-500 group-hover:bg-primary-50 group-hover:text-primary-500"
-                                    )}>
-                                        <Icon className="w-6 h-6 stroke-[1.5]" />
-                                    </div>
-                                    <p className={cn("font-semibold text-sm transition-colors", isSelected ? "text-primary-800" : "text-gray-700")}>{cat.label}</p>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Step 2: Topics */}
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-900">2. Specific Topics</h3>
-                    <p className="text-sm text-muted-foreground">Select or add the key topics you usually post about.</p>
-                </div>
-
-                <div className="p-5 border border-gray-200 rounded-2xl bg-white shadow-sm space-y-4">
-                    {categories.length === 0 && topics.length === 0 && (
-                        <p className="text-sm text-gray-500 italic">Select a category above to see recommended topics, or add your own below.</p>
-                    )}
-
-                    {allDisplayTopics.length > 0 && (
-                        <div className="flex flex-wrap gap-2.5">
-                            {allDisplayTopics.map((topic) => {
-                                const isSelected = topics.includes(topic);
-                                return (
-                                    <Badge
-                                        key={topic}
-                                        variant={isSelected ? "default" : "outline"}
-                                        role="checkbox"
-                                        aria-checked={isSelected}
-                                        tabIndex={0}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault();
-                                                handleToggleTopic(topic);
-                                            }
-                                        }}
-                                        className={cn(
-                                            "cursor-pointer text-sm font-medium py-1.5 px-4 rounded-full transition-all duration-200 ease-out active:scale-95 hover:-translate-y-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 select-none",
-                                            isSelected
-                                                ? "bg-primary-500 text-white hover:bg-primary-600 hover:shadow-md shadow-primary-500/25 border-transparent"
-                                                : "bg-white text-gray-700 border border-gray-200 shadow-sm hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700"
-                                        )}
-                                        onClick={() => handleToggleTopic(topic)}
-                                    >
-                                        {topic}
-                                    </Badge>
-                                );
-                            })}
+                                {isAnalyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                                Sync Patterns
+                            </Button>
                         </div>
-                    )}
-
-                    <div className="flex gap-2 pt-2 items-center">
-                        <Input
-                            placeholder="Add custom topic..."
-                            value={customTopic}
-                            onChange={e => setCustomTopic(e.target.value)}
-                            onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleAddCustomTopic();
-                                }
-                            }}
-                            className="max-w-[240px] border-gray-200 focus:ring-primary-500/20 focus:border-primary-500"
-                        />
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={handleAddCustomTopic}
-                            className="text-gray-700"
-                        >
-                            Add
-                        </Button>
-                    </div>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xl flex items-center gap-3 text-primary-900">
+                                <BrainCircuit className="h-6 w-6 text-primary-600" />
+                                AI Voice Analysis
+                            </CardTitle>
+                            <CardDescription className="text-primary-800/70 font-medium">
+                                What Aeden has learned about your writing style:
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-primary-100/30">
+                                <p className="text-sm text-gray-800 italic leading-relaxed">
+                                    "{voiceAnalysis.voice_summary}"
+                                </p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-primary-600 flex items-center gap-1">
+                                        <Type className="h-3 w-3" /> Learned Patterns
+                                    </h4>
+                                    <ul className="space-y-1.5">
+                                        {voiceAnalysis.characteristics.map((c: string, i: number) => (
+                                            <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                                                <span className="h-1 w-1 rounded-full bg-primary-400 mt-2 flex-shrink-0" />
+                                                {c}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <div className="space-y-3">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-primary-600 flex items-center gap-1">
+                                        <FileText className="h-3 w-3" /> Style Metrics
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {voiceAnalysis.common_patterns && Object.entries(voiceAnalysis.common_patterns).map(([key, val]) => (
+                                            <div key={key} className="flex items-center justify-between bg-white/40 px-3 py-1.5 rounded-lg border border-primary-50/50">
+                                                <span className="text-xs font-medium text-gray-500 capitalize">{key.replace('_', ' ')}</span>
+                                                <Badge variant="secondary" className="text-[10px] uppercase bg-primary-100/50 text-primary-700 border-none">{String(val)}</Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Separator className="mt-8 mb-4" />
                 </div>
-            </div>
+            )}
 
-            {/* Step 3: Target Audience */}
-            <div className="space-y-4">
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-900">3. Target Audience</h3>
-                    <p className="text-sm text-muted-foreground">Who are you writing for?</p>
-                </div>
-                <div>
-                    <Label htmlFor="audience" className="sr-only">Target Audience</Label>
-                    <Input
-                        id="audience"
-                        value={targetAudience}
-                        onChange={(e) => setTargetAudience(e.target.value)}
-                        placeholder="e.g., Indie hackers, Non-technical founders, SEO experts"
-                        className="bg-white border-gray-200 focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm py-6 text-base rounded-xl"
-                    />
-                </div>
-            </div>
+            {/* Deep Strategy Analysis */}
+            {strategy && (
+                <Card className="border-none bg-gray-900 text-white overflow-hidden shadow-xl rounded-2xl">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <TrendingUp className="h-5 w-5 text-primary-400" />
+                            Deep Strategy Analysis
+                        </CardTitle>
+                        <CardDescription className="text-gray-400">
+                            How your persona rules translate to growth.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                <p className="text-[10px] font-bold text-primary-400 uppercase tracking-widest mb-1">Top Archetype</p>
+                                <p className="text-xl font-bold">{strategy.winning_archetype}</p>
+                            </div>
+                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                <p className="text-[10px] font-bold text-primary-400 uppercase tracking-widest mb-1">Resonance Score</p>
+                                <p className="text-xl font-bold">{strategy.resonance_score}%</p>
+                            </div>
+                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                                <p className="text-[10px] font-bold text-primary-400 uppercase tracking-widest mb-1">Weekly Goal</p>
+                                <p className="text-sm font-medium leading-tight">{strategy.weekly_goal}</p>
+                            </div>
+                        </div>
 
-            {/* Step 4: Refinement */}
-            <div className="space-y-4">
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-900">4. Persona Nuance (Optional)</h3>
-                    <p className="text-sm text-muted-foreground">Refine your identity for the AI context.</p>
-                </div>
-                <div>
-                    <Label htmlFor="refinement" className="sr-only">Persona Refinement</Label>
-                    <Input
-                        id="refinement"
-                        value={refinement}
-                        onChange={(e) => setRefinement(e.target.value)}
-                        placeholder="e.g., for non-technical founders, B2B SaaS focus, solopreneur building in public"
-                        className="bg-white border-gray-200 focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm py-6 text-base rounded-xl"
-                    />
-                </div>
-            </div>
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-bold uppercase text-gray-400">Tactical Adjustments</h4>
+                            <div className="grid grid-cols-1 gap-2">
+                                {strategy.adjustment_tips.map((tip: string, i: number) => (
+                                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 text-sm">
+                                        <div className="h-2 w-2 rounded-full bg-primary-500" />
+                                        {tip}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
-            <Separator className="my-6" />
-
-            {/* Brand guidelines (Advanced) */}
-            <div className="space-y-4">
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Strict Rules (Advanced)</h3>
-                    <p className="text-sm text-muted-foreground">Hard rules the AI must follow every time.</p>
-                </div>
-                <Textarea
-                    id="brand"
-                    value={brandGuidelines}
-                    onChange={e => setBrandGuidelines(e.target.value)}
-                    placeholder={'Examples:\n• Never use hashtags\n• Always end with a question\n• Do not use the word "excited" or "thrilled"'}
-                    className="min-h-[120px] text-base bg-white border-gray-200 focus:bg-white focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all shadow-sm rounded-xl p-4"
-                />
-            </div>
-
-            <div className="pt-4">
-                <Button
-                    onClick={handleSave}
-                    disabled={isPending}
-                    size="lg"
-                    className="w-full gap-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-md hover:shadow-lg transition-all duration-200 ease-out active:scale-[0.98]"
-                    id="save-voice-btn"
+            {/* Persona Setup Form (Collapsible when saved) */}
+            <div className="space-y-6">
+                <Collapsible
+                    open={isFormExpanded}
+                    onOpenChange={setIsFormExpanded}
+                    className="w-full space-y-4"
                 >
-                    {isPending
-                        ? <><Sparkles className="h-4 w-4 animate-spin" /> Compiling Persona...</>
-                        : <><Save className="h-4 w-4" /> Save Persona Preferences</>
-                    }
-                </Button>
+                    <div className="flex items-center justify-between px-2">
+                        <div className="flex flex-col">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <Settings2 className="h-5 w-5 text-gray-400" />
+                                Persona Configuration
+                            </h3>
+                            {isSaved && !isFormExpanded && (
+                                <p className="text-xs text-muted-foreground">
+                                    {categories.length} Categories and {topics.length} Topics configured.
+                                </p>
+                            )}
+                        </div>
+                        <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="gap-2">
+                                {isFormExpanded ? (
+                                    <>Collapse <ChevronUp className="h-4 w-4" /></>
+                                ) : (
+                                    <>Manage Setup <ChevronDown className="h-4 w-4" /></>
+                                )}
+                            </Button>
+                        </CollapsibleTrigger>
+                    </div>
+
+                    <CollapsibleContent className="space-y-8 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        {/* Step 1: Category */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-primary-700 text-[10px]">1</span>
+                                Primary Categories (Max 3)
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                {CATEGORIES.map((cat) => {
+                                    const Icon = cat.icon;
+                                    const isSelected = categories.includes(cat.id);
+                                    return (
+                                        <Card
+                                            key={cat.id}
+                                            role="button"
+                                            onClick={() => handleSetCategory(cat.id)}
+                                            className={cn(
+                                                "cursor-pointer transition-all duration-200 border-gray-100 shadow-sm",
+                                                isSelected ? "border-primary-500 bg-primary-50/50" : "hover:border-primary-200 hover:bg-gray-50 bg-white"
+                                            )}
+                                        >
+                                            <CardContent className="p-4 flex items-center gap-3">
+                                                <div className={cn(
+                                                    "p-2 rounded-lg",
+                                                    isSelected ? "bg-primary-500 text-white" : "bg-gray-100 text-gray-500"
+                                                )}>
+                                                    <Icon className="w-4 h-4" />
+                                                </div>
+                                                <p className="font-medium text-xs text-gray-800">{cat.label}</p>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Step 2: Topics */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-primary-700 text-[10px]">2</span>
+                                Specific Topics
+                            </h3>
+                            <div className="p-4 border border-gray-100 rounded-xl bg-white shadow-sm space-y-4">
+                                <div className="flex flex-wrap gap-2">
+                                    {allDisplayTopics.map((topic) => {
+                                        const isSelected = topics.includes(topic);
+                                        return (
+                                            <Badge
+                                                key={topic}
+                                                variant={isSelected ? "default" : "outline"}
+                                                className={cn(
+                                                    "cursor-pointer text-xs px-3 py-1 rounded-full",
+                                                    isSelected ? "bg-primary-500 hover:bg-primary-600" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                                )}
+                                                onClick={() => handleToggleTopic(topic)}
+                                            >
+                                                {topic}
+                                            </Badge>
+                                        );
+                                    })}
+                                </div>
+                                <div className="flex gap-2 items-center">
+                                    <Input
+                                        placeholder="Add custom topic..."
+                                        value={customTopic}
+                                        onChange={e => setCustomTopic(e.target.value)}
+                                        className="h-9 text-xs border-gray-100"
+                                    />
+                                    <Button size="sm" variant="secondary" onClick={handleAddCustomTopic}>Add</Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 3 & 4 */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold">Target Audience</Label>
+                                <Input value={targetAudience} onChange={e => setTargetAudience(e.target.value)} placeholder="Indie hackers..." className="h-9 text-sm" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold">Nuance</Label>
+                                <Input value={refinement} onChange={e => setRefinement(e.target.value)} placeholder="Technical but chill..." className="h-9 text-sm" />
+                            </div>
+                        </div>
+
+                        {/* Continuous Learning Toggle */}
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <div>
+                                <Label className="text-sm font-bold block">Continuous Learning</Label>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">Let AI learn from your edits automatically.</p>
+                            </div>
+                            <Switch checked={autoLearn} onCheckedChange={setAutoLearn} />
+                        </div>
+
+                        {/* Step 5: Tone & AI Model */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-primary-700 text-[10px]">5</span>
+                                Tone & AI Model
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold flex items-center gap-1">
+                                        <MessageSquare className="h-3 w-3" /> Default Tone
+                                    </Label>
+                                    <Select value={tone} onValueChange={setTone}>
+                                        <SelectTrigger className="h-9 text-sm">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {TONES.map(t => (
+                                                <SelectItem key={t.id} value={t.id}>
+                                                    {t.label} - {t.description}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold flex items-center gap-1">
+                                        <Cpu className="h-3 w-3" /> AI Model
+                                    </Label>
+                                    <Select value={preferredAiModel} onValueChange={setPreferredAiModel}>
+                                        <SelectTrigger className="h-9 text-sm">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {AI_MODELS.map(m => (
+                                                <SelectItem key={m.id} value={m.id}>
+                                                    {m.label} - {m.description}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Button onClick={handleSave} disabled={isPending} className="w-full bg-primary-600 hover:bg-primary-700 h-10">
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                            Save Persona
+                        </Button>
+                    </CollapsibleContent>
+                </Collapsible>
             </div>
+
+            <Separator className="my-2" />
+
+            {/* Persona Playground */}
+            {isSaved && (
+                <div className="space-y-6 pt-4">
+                    <div className="text-center space-y-1">
+                        <h2 className="text-xl font-bold text-gray-900 flex items-center justify-center gap-2">
+                            <Sparkles className="h-5 w-5 text-primary-600" />
+                            Persona Playground
+                        </h2>
+                        <p className="text-xs text-muted-foreground">Test how your persona speaks.</p>
+                    </div>
+                    <Card className="border-primary-100 shadow-sm">
+                        <CardContent className="p-6 space-y-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold">Raw Thought</Label>
+                                <div className="flex gap-2">
+                                    <Input value={playgroundInput} onChange={e => setPlaygroundInput(e.target.value)} placeholder="Just launched something cool..." className="flex-1 h-10" />
+                                    <Button onClick={handleTestPlayground} disabled={isGeneratingPlayground} className="bg-primary-600 h-10">
+                                        {isGeneratingPlayground ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
+                                    </Button>
+                                </div>
+                            </div>
+                            {playgroundOutput && (
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                    <Label className="text-[10px] font-bold uppercase text-primary-600 mb-1 block">AI Output</Label>
+                                    <p className="text-sm text-gray-800 leading-relaxed">{playgroundOutput}</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }
-

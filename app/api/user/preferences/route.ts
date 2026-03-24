@@ -15,7 +15,7 @@ export async function PATCH(request: NextRequest) {
     } catch {
         return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
-    const { user_type, brand_guidelines, target_audience, categories, topics, refinement, ai_context } = body;
+    const { user_type, brand_guidelines, target_audience, categories, topics, refinement, ai_context, auto_learn_persona, voice_analysis } = body;
     const { error } = await supabase
         .from("user_preferences")
         .upsert({
@@ -27,6 +27,8 @@ export async function PATCH(request: NextRequest) {
             topics: topics ?? [],
             refinement: refinement ?? null,
             ai_context: ai_context ?? null,
+            auto_learn_persona: auto_learn_persona ?? true,
+            voice_analysis: voice_analysis ?? null,
             // Keep defaults to satisfy old DB constraints
             tone: "casual",
             preferred_ai_model: "gemini",

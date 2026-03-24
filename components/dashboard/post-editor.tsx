@@ -22,6 +22,8 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
     const [generatedContent, setGeneratedContent] = useState(initialContent);
     const [originalAiText, setOriginalAiText] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
+    const [tone, setTone] = useState("professional");
+    const [preferredAiModel, setPreferredAiModel] = useState("gemini-2.0-flash");
     const router = useRouter();
 
     const [isPublishing, setIsPublishing] = useState(false);
@@ -36,6 +38,8 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     input,
+                    tone,
+                    preferred_ai_model: preferredAiModel,
                 }),
             });
 
@@ -199,6 +203,35 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-medium">Tone</Label>
+                            <Select value={tone} onValueChange={setTone}>
+                                <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="casual">Casual</SelectItem>
+                                    <SelectItem value="professional">Professional</SelectItem>
+                                    <SelectItem value="technical">Technical</SelectItem>
+                                    <SelectItem value="humorous">Humorous</SelectItem>
+                                    <SelectItem value="inspirational">Inspirational</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-medium">AI Model</Label>
+                            <Select value={preferredAiModel} onValueChange={setPreferredAiModel}>
+                                <SelectTrigger className="h-9 text-sm">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash</SelectItem>
+                                    <SelectItem value="claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                     <div className="space-y-2">
                         <Label htmlFor="input-content">What did you work on?</Label>
                         <Textarea

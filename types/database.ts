@@ -100,6 +100,7 @@ export interface UserPreferences {
     default_posting_time: string | null;
     preferred_ai_model: "gemini" | "claude";
     auto_generate_on_sync: boolean;
+    auto_learn_persona: boolean;
     onboarding_completed: boolean;
     created_at: string;
     updated_at: string;

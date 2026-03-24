@@ -1,5 +1,5 @@
-import { generateWithGemini, analyzeVoiceWithGemini, type GeminiGenerateOptions } from "./google";
-import { generateWithClaude, analyzeVoiceWithClaude, type ClaudeGenerateOptions } from "./anthropic";
+import { generateWithGemini, analyzeVoiceWithGemini, analyzeEditsWithGemini, type GeminiGenerateOptions } from "./google";
+import { generateWithClaude, analyzeVoiceWithClaude, analyzeEditsWithClaude, type ClaudeGenerateOptions } from "./anthropic";
 
 export type AiModel = "gemini" | "claude";
 export type AiArchetype = "observer" | "prophet" | "devastator";
@@ -52,6 +52,42 @@ export async function analyzeVoice(
     }
 
     return analyzeVoiceWithGemini(pastPosts);
+}
+
+/**
+ * Extract stylistic patterns from post edits.
+ */
+export async function analyzeEdits(
+    edits: Array<{ original: string; edited: string }>,
+    model: AiModel = "gemini"
+): Promise<object> {
+    if (model === "claude") {
+        return analyzeEditsWithClaude(edits);
+    }
+    return analyzeEditsWithGemini(edits);
+}
+
+/**
+ * Generate a content strategy based on persona and top-performing posts.
+ */
+export async function generateAIStrategy(options: {
+    persona: string;
+    voiceAnalysis: any;
+    topPosts: Array<{ content: string; template: string }>;
+    model?: AiModel;
+}) {
+    // For now, return a sophisticated mock that follows the Shopeers aesthetic
+    // This will be replaced with a real AI call in the next iteration
+    return {
+        winning_archetype: "The Contrarian Explorer",
+        resonance_score: 88,
+        adjustment_tips: [
+            "Your 'How-to' posts are 2.4x more engaging than average.",
+            "Removing hashtags from the first paragraph increased reach by 12%.",
+            "Hooks starting with a statistic performed best this week."
+        ],
+        weekly_goal: "Publish 3 'Metrics' posts and 2 'Story Arc' posts to maximize engagement."
+    };
 }
 
 /**

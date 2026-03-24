@@ -1,278 +1,122 @@
-import { ThreadsUser, ThreadsTokenResponse, ThreadsMediaContainerResponse, ThreadsPublishResponse, ThreadsError } from "./types";
+/**
+ * Meta Threads Graph API Client
+ * Official Documentation: https://developers.facebook.com/docs/threads/
+ */
 
-const THREADS_API_BASE = "https://graph.threads.net/v1.0";
+const THREADS_API_VERSION = "v1.0";
+const THREADS_API_BASE_URL = `https://graph.threads.net/${THREADS_API_VERSION}`;
 
-export class ThreadsClient {
-    private appId: string;
-    private appSecret: string;
-    private redirectUri: string;
-
-    constructor() {
-        const appId = process.env.THREADS_APP_ID;
-        const appSecret = process.env.THREADS_APP_SECRET;
-        const redirectUri = process.env.NEXT_PUBLIC_THREADS_REDIRECT_URI;
-
-        if (!appId || !appSecret || !redirectUri) {
-            throw new Error("Threads environment variables are missing. Check .env");
-        }
-
-        this.appId = appId;
-        this.appSecret = appSecret;
-        this.redirectUri = redirectUri;
-    }
-    /**
-     * Generate the OAuth Authorization URL
-     */
-    getAuthUrl(state?: string): string {
-        const scopes = [
-            "threads_basic",
-            "threads_content_publish",
-            "threads_manage_insights"
-        ].join(",");
-
-        const url = new URL("https://threads.net/oauth/authorize");
-        url.searchParams.append("client_id", this.appId);
-        url.searchParams.append("redirect_uri", this.redirectUri);
-        url.searchParams.append("scope", scopes);
-        url.searchParams.append("response_type", "code");
-        if (state) {
-            url.searchParams.append("state", state);
-        }
-
-        return url.toString();
-    }
-
-    /**
-     * Exchange short-lived code for access token
-     */
-    async exchangeCodeForToken(code: string): Promise<ThreadsTokenResponse> {
-        const url = "https://graph.threads.net/oauth/access_token";
-        const formData = new FormData();
-        formData.append("client_id", this.appId);
-        formData.append("client_secret", this.appSecret);
-        formData.append("grant_type", "authorization_code");
-        formData.append("redirect_uri", this.redirectUri);
-        formData.append("code", code);
-
-        const response = await fetch(url, {
-            method: "POST",
-            body: formData,
-        });
-
-        if (!response.ok) {
-            let errorMessage: string;
-            try {
-                const error = await response.json();
-                errorMessage = JSON.stringify(error);
-            } catch {
-                errorMessage = response.statusText;
-            }
-            throw new Error(`Failed to exchange code: ${errorMessage}`);
-        }
-
-        const data = await response.json();
-
-        // The initial token is short-lived (60 days for Threads)
-        // We should exchange it for a long-lived token immediately
-        return data as ThreadsTokenResponse;
-    }
-
-    /**
-     * Exchange short-lived token for long-lived token (60 days)
-     */
-    async exchangeForLongLivedToken(accessToken: string): Promise<ThreadsTokenResponse> {
-        const url = "https://graph.threads.net/access_token";
-        const params = new URLSearchParams();
-        params.append("grant_type", "th_exchange_token");
-        params.append("client_secret", this.appSecret);
-        params.append("access_token", accessToken);
-
-        const response = await fetch(`${url}?${params.toString()}`, {
-            method: "GET"
-        });
-
-        if (!response.ok) {
-            let errorMessage: string;
-            try {
-                const error = await response.json();
-                errorMessage = JSON.stringify(error);
-            } catch {
-                errorMessage = response.statusText;
-            }
-            throw new Error(`Failed to exchange for long-lived token: ${errorMessage}`);
-        }
-
-        const data = await response.json();
-        return data as ThreadsTokenResponse;
-    }
-
-    /**
-     * Refresh a long-lived token (extends expiration by another 60 days)
-     */
-    async refreshToken(accessToken: string): Promise<ThreadsTokenResponse> {
-        const url = "https://graph.threads.net/refresh_access_token";
-        const params = new URLSearchParams();
-        params.append("grant_type", "th_refresh_token");
-        params.append("access_token", accessToken);
-
-        const response = await fetch(`${url}?${params.toString()}`, {
-            method: "GET"
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Failed to refresh token: ${JSON.stringify(error)}`);
-        }
-
-        const data = await response.json();
-        return data as ThreadsTokenResponse;
-    }
-
-    /**
-     * Get User Profile
-     * Using 'me' endpoint is more reliable with fresh tokens
-     */
-    async getUser(userId: string, accessToken: string): Promise<ThreadsUser> {
-        // Use 'me' endpoint instead of userId - works better with OAuth tokens
-        // Note: followers_count requires app review approval — excluded here
-        const url = `${THREADS_API_BASE}/me?fields=id,username,threads_profile_picture_url,threads_biography&access_token=${accessToken}`;
-
-        console.log("🔍 Fetching Threads user profile:", { userId, endpoint: "me", urlPreview: url.replace(accessToken, "[REDACTED]") });
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            // Try minimal fields as fallback (in case some fields aren't approved)
-            console.warn("⚠️ Full profile fetch failed, trying minimal fields...");
-            const minimalUrl = `${THREADS_API_BASE}/me?fields=id,username&access_token=${accessToken}`;
-            const minimalResponse = await fetch(minimalUrl);
-
-            if (!minimalResponse.ok) {
-                let errorMessage: string;
-                try {
-                    const error = await minimalResponse.json();
-                    errorMessage = JSON.stringify(error);
-                } catch {
-                    errorMessage = minimalResponse.statusText;
-                }
-                console.error("❌ Threads getUser API error:", {
-                    status: minimalResponse.status,
-                    error: errorMessage,
-                    userId
-                });
-                throw new Error(`Failed to fetch user profile: ${errorMessage}`);
-            }
-
-            const minimalData = await minimalResponse.json();
-            console.log("✅ Minimal Threads user data received:", minimalData);
-            return minimalData;
-        }
-
-        const userData = await response.json();
-        console.log("✅ Threads user data received:", userData);
-        return userData;
-    }
-
-    /**
-     * Publish a Text Post (Step 1 + Step 2)
-     */
-    async publishPost(userId: string, accessToken: string, text: string, imageUrl?: string): Promise<string> {
-        // Step 1: Create Media Container
-        const containerId = await this.createMediaContainer(userId, accessToken, text, imageUrl);
-
-        console.log("⏳ Waiting 30 seconds for Threads to process the container...");
-
-        // Step 1.5: Wait for Meta to process the container
-        // Threads API requires 30 seconds for processing
-        await new Promise(resolve => setTimeout(resolve, 30000));
-
-        console.log("✅ Wait complete, publishing now...");
-
-        // Step 2: Publish Media Container
-        const publishId = await this.publishMediaContainer(userId, accessToken, containerId);
-
-        return publishId;
-    }
-
-    /**
-     * Step 1: Create a Media Container (Ready for publishing)
-     */
-    private async createMediaContainer(userId: string, accessToken: string, text: string, imageUrl?: string): Promise<string> {
-        // Use 'me' endpoint - more reliable with OAuth tokens
-        const url = `${THREADS_API_BASE}/me/threads`;
-        const params = new URLSearchParams();
-
-        params.append("media_type", imageUrl ? "IMAGE" : "TEXT");
-        params.append("text", text);
-        params.append("access_token", accessToken);
-
-        if (imageUrl) {
-            params.append("image_url", imageUrl);
-        }
-
-        const response = await fetch(url.toString(), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: params,
-        });
-
-        if (!response.ok) {
-            const error = await response.json() as ThreadsError;
-            throw new Error(`Failed to create media container: ${error.error.message}`);
-        }
-
-        const data = await response.json() as ThreadsMediaContainerResponse;
-        return data.id;
-    }
-
-    /**
-     * Step 2: Publish the Container
-     */
-    private async publishMediaContainer(userId: string, accessToken: string, creationId: string): Promise<string> {
-        // Use 'me' endpoint - more reliable with OAuth tokens
-        const url = `${THREADS_API_BASE}/me/threads_publish`;
-        const params = new URLSearchParams();
-
-        params.append("creation_id", creationId);
-        params.append("access_token", accessToken);
-
-        console.log("🚀 Publishing media container:", {
-            endpoint: url,
-            creationId: creationId?.substring(0, 20) + "..."
-        });
-
-        const response = await fetch(url.toString(), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: params,
-        });
-
-        if (!response.ok) {
-            let errorDetails: any;
-            try {
-                errorDetails = await response.json();
-            } catch {
-                errorDetails = { message: response.statusText };
-            }
-
-            console.error("❌ Publish failed:", {
-                status: response.status,
-                statusText: response.statusText,
-                error: errorDetails
-            });
-
-            const error = errorDetails as ThreadsError;
-            throw new Error(`Failed to publish container: ${error.error?.message || response.statusText}`);
-        }
-
-        const data = await response.json() as ThreadsPublishResponse;
-        console.log("✅ Published successfully:", data.id);
-        return data.id;
+export class ThreadsApiError extends Error {
+    constructor(
+        message: string,
+        public readonly status: number,
+        public readonly data: any
+    ) {
+        super(message);
+        this.name = "ThreadsApiError";
     }
 }
 
-export const threadsClient = new ThreadsClient();
+/**
+ * Creates a media container for a Threads post
+ * Step 1 of the Threads publishing process.
+ */
+export async function createMediaContainer(
+    accountId: string,
+    accessToken: string,
+    text: string,
+    imageUrl?: string | null
+): Promise<string> {
+    const url = new URL(`${THREADS_API_BASE_URL}/${accountId}/threads`);
+    
+    // Auth
+    url.searchParams.append("access_token", accessToken);
+    
+    // Media Type and Content
+    if (imageUrl) {
+        url.searchParams.append("media_type", "IMAGE");
+        url.searchParams.append("image_url", imageUrl);
+        if (text) {
+            url.searchParams.append("text", text);
+        }
+    } else {
+        url.searchParams.append("media_type", "TEXT");
+        url.searchParams.append("text", text);
+    }
+
+    const response = await fetch(url.toString(), {
+        method: "POST",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        console.error("Threads API Create Container Error:", data);
+        throw new ThreadsApiError(
+            data.error?.message || "Failed to create Threads media container",
+            response.status,
+            data
+        );
+    }
+
+    return data.id; // Returns the creation_id
+}
+
+/**
+ * Publishes a previously created media container
+ * Step 2 of the Threads publishing process.
+ */
+export async function publishMediaContainer(
+    accountId: string,
+    accessToken: string,
+    creationId: string
+): Promise<string> {
+    const url = new URL(`${THREADS_API_BASE_URL}/${accountId}/threads_publish`);
+    
+    // Auth and Target
+    url.searchParams.append("access_token", accessToken);
+    url.searchParams.append("creation_id", creationId);
+
+    const response = await fetch(url.toString(), {
+        method: "POST",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        console.error("Threads API Publish Error:", data);
+        throw new ThreadsApiError(
+            data.error?.message || "Failed to publish Threads media container",
+            response.status,
+            data
+        );
+    }
+
+    return data.id; // Returns the platform_post_id
+}
+
+/**
+ * Helper function to completely publish a post to Threads
+ * (Creates container -> Publishes container)
+ */
+export async function publishPost(
+    accountId: string,
+    accessToken: string,
+    text: string,
+    imageUrl?: string | null
+): Promise<string> {
+    try {
+        const creationId = await createMediaContainer(accountId, accessToken, text, imageUrl);
+        
+        // Wait briefly for Media Container to be processed by Meta
+        // Sometimes publishing immediately after creation fails on their end.
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const publishedPostId = await publishMediaContainer(accountId, accessToken, creationId);
+        
+        return publishedPostId;
+    } catch (error) {
+        console.error("Complete publish sequence failed:", error);
+        throw error;
+    }
+}

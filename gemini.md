@@ -16,7 +16,62 @@
 
 ---
 
-## Session Log
+### March 23, 2026 - Intelligence Dashboard & Strategy Engine
+
+**What was done:**
+- Built the **AI Strategy Analysis Engine** (`app/api/persona/strategy/route.ts`) to correlate post engagement with persona traits
+- Created the **AI Strategy Advisor** component (`components/dashboard/strategy-advisor.tsx`) following Shopeers aesthetics
+- Integrated the Advisor into the main **Dashboard Sidebar** and added **Deep Strategy Analysis** to the Voice settings
+- Refined the **Voice & Persona UI**:
+  - Implemented a **Collapsible Configuration Form** to prioritize active agent features
+  - Fixed JSX syntax errors and missing Radix dependencies (`@radix-ui/react-collapsible`)
+- Updated **Implementation Plan** and **Task List** for Phase 10
+
+**Files modified:**
+- `app/api/persona/strategy/route.ts`
+- `lib/ai/client.ts`
+- `components/dashboard/strategy-advisor.tsx`
+- `components/ui/collapsible.tsx`
+- `app/dashboard/page.tsx`
+- `components/dashboard/settings/voice-form.tsx`
+- `package.json`
+
+**Status:**
+- Intelligence Dashboard (Phase 10) ✅ Complete
+- Persona UX Refinements ✅ Complete
+- Ready for Engagement Sync Expansion or GitHub Integration
+
+---
+
+### March 23, 2026 - Persona UI & Threads Publishing
+
+**What was done:**
+- Built the **Threads API Client** (`lib/threads/client.ts`) and backend publishing route (`app/api/posts/publish/route.ts`)
+- Integrated the **Sonner Toaster** globally in `app/layout.tsx` for real-time user feedback
+- Implemented **Persona UI Enhancements** in `voice-form.tsx`:
+  - Added a **Loading Overlay** ("Compiling Persona...") for expensive AI context updates
+  - Created a **Persona Playground** for instant AI voice testing on the settings page
+  - Added an **Auto-Learn Toggle** for autonomous pattern extraction
+- Applied Database Migration `012_auto_learn_persona.sql`
+- Updated `system_arch.md` to clarify pattern extraction thresholds and scoring per PR feedback
+
+**Files modified:**
+- `lib/threads/client.ts`
+- `app/api/posts/publish/route.ts`
+- `app/layout.tsx`
+- `components/dashboard/settings/voice-form.tsx`
+- `supabase/migrations/012_auto_learn_persona.sql`
+- `types/database.ts`
+- `app/api/user/preferences/route.ts`
+- `system_arch.md`
+- `plan.md`
+
+**Status:**
+- Threads Publishing ✅ Complete
+- Persona UI & Tools ✅ Complete
+- Next: Layer 3 Pattern Extraction or GitHub Integration
+
+---
 
 ### March 23, 2026 - Multi-Category Persona Expansion
 

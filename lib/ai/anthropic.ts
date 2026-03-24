@@ -131,3 +131,60 @@ Output ONLY valid JSON, nothing else.`;
         throw error;
     }
 }
+
+export async function analyzeEditsWithClaude(
+    edits: Array<{ original: string; edited: string }>
+): Promise<object> {
+    const anthropic = getClient();
+    if (edits.length === 0) {
+        throw new Error("At least one edit pair is required for pattern extraction");
+    }
+
+    const prompt = `Analyze these pairs of AI-generated text vs user-edited text to identify consistent stylistic patterns and rules the user follows:
+
+${edits.map((e, i) => `Pair ${i + 1}:
+Original AI: "${e.original}"
+User Edited: "${e.edited}"`).join("\n\n")}
+
+Extracted Writing Rules:
+Based on the edits above, identify 5-7 clear, actionable writing rules that the AI should follow to match the user's style better. Focus on:
+- Sentence structure and length
+- Emoji density and placement
+- Hook style (opening line)
+- Structural patterns (line breaks, lists)
+- Tone shifts
+
+Return ONLY a JSON object with this key:
+{
+  "voice_analysis": {
+    "tone": "casual|professional|technical|humorous|inspirational",
+    "characteristics": ["rule 1", "rule 2", "rule 3", "rule 4", "rule 5"],
+    "common_patterns": {
+      "sentence_length": "short|medium|long", 
+      "emoji_usage": "none|occasional|frequent",
+      "line_breaks": "none|some|many"
+    },
+    "voice_summary": "A 2-3 sentence summary of the writing style."
+  }
+}
+
+Output ONLY valid JSON.`;
+
+    try {
+        const message = await anthropic.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 2000,
+            messages: [{ role: "user", content: prompt }],
+        });
+
+        const text = message.content[0].type === "text" ? message.content[0].text.trim() : "";
+        // Clean markdown if present
+        const jsonStr = text.startsWith("```json") ? text.replace(/```json|```/g, "").trim() : text;
+        return JSON.parse(jsonStr);
+    } catch (error) {
+        if (error instanceof Anthropic.APIError) {
+            throw new Error(`Claude API error: ${error.message}`);
+        }
+        throw error;
+    }
+}

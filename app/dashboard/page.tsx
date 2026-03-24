@@ -15,35 +15,97 @@ import {
     Send,
     Clock,
     CheckCircle2,
-    AlertCircle
+    AlertCircle,
+    Zap,
+    Target,
+    Award
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { StrategyAdvisor } from "@/components/dashboard/strategy-advisor";
 
 export default async function DashboardPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     let isThreadsConnected = false;
+    let postsThisWeek = 0;
+    let totalImpressions = 0;
+    let totalEngagement = 0;
+    let engagementRate = 0;
+    let publishedPosts: any[] = [];
+    let recentPosts: any[] = [];
+    let connectedSourcesCount = 1;
+    let strategyInsights: any = null;
 
     if (user) {
-        const { data: threadsAccount } = await supabase
-            .from("social_accounts")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("platform", "threads")
-            .eq("is_active", true)
-            .single();
+        const now = new Date();
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-        isThreadsConnected = !!threadsAccount;
+        const [threadsAccount, postsData, prefsData, allPosts] = await Promise.all([
+            supabase
+                .from("social_accounts")
+                .select("id")
+                .eq("user_id", user.id)
+                .eq("platform", "threads")
+                .eq("is_active", true)
+                .single(),
+            supabase
+                .from("posts")
+                .select("impressions, likes, comments, shares")
+                .eq("user_id", user.id)
+                .eq("status", "published")
+                .gte("created_at", weekAgo.toISOString()),
+            supabase
+                .from("user_preferences")
+                .select("strategy_insights, categories, topics")
+                .eq("user_id", user.id)
+                .single(),
+            supabase
+                .from("posts")
+                .select("id, content, status, impressions, likes, comments, shares, created_at")
+                .eq("user_id", user.id)
+                .order("created_at", { ascending: false })
+                .limit(10)
+        ]);
+
+        isThreadsConnected = !!threadsAccount.data;
+        connectedSourcesCount = isThreadsConnected ? 2 : 1;
+
+        if (postsData.data) {
+            postsThisWeek = postsData.data.length;
+            totalImpressions = postsData.data.reduce((sum, p) => sum + (p.impressions || 0), 0);
+            const totalLikes = postsData.data.reduce((sum, p) => sum + (p.likes || 0), 0);
+            const totalComments = postsData.data.reduce((sum, p) => sum + (p.comments || 0), 0);
+            totalEngagement = totalLikes + totalComments;
+            engagementRate = totalImpressions > 0 ? Math.round((totalEngagement / totalImpressions) * 1000) / 10 : 0;
+        }
+
+        if (allPosts.data) {
+            recentPosts = allPosts.data.map(p => ({
+                ...p,
+                engagement: (p.likes || 0) + (p.comments || 0) + (p.shares || 0)
+            }));
+        }
+
+        publishedPosts = recentPosts.filter(p => p.status === "published");
+        strategyInsights = prefsData.data?.strategy_insights;
     }
+
+    const isNewUser = publishedPosts.length === 0;
 
     return (
         <div className="space-y-6" style={{ backgroundColor: '#f8fafc', minHeight: '100%' }}>
             {/* Welcome Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Welcome back! 👋</h1>
-                    <p className="text-gray-500 mt-1">Ready to share what you&apos;ve been building?</p>
+                    <h1 className="text-2xl font-bold text-gray-900">
+                        {isNewUser ? "Welcome to Aeden! 🚀" : "Welcome back! 👋"}
+                    </h1>
+                    <p className="text-gray-500 mt-1">
+                        {isNewUser 
+                            ? "Let's set up your voice and create your first post." 
+                            : "Ready to share what you've been building?"}
+                    </p>
                 </div>
                 <Link href="/dashboard/posts/new">
                     <Button size="lg" className="gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-md hover:shadow-lg transition-all duration-200 ease-out active:scale-[0.98]">
@@ -53,35 +115,83 @@ export default async function DashboardPage() {
                 </Link>
             </div>
 
-            {/* Quick Stats Row - Aeden Relevant */}
+            {/* Cold Start / Inaugural Goals for New Users */}
+            {isNewUser && (
+                <Card className="border-0 shadow-sm bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl overflow-hidden">
+                    <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                            <div className="p-3 rounded-xl bg-amber-100">
+                                <Zap className="h-6 w-6 text-amber-600" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-gray-900 mb-1">Your Inaugural Goals</h3>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Since you're just getting started, here are your first steps to build momentum:
+                                </p>
+                                <div className="grid gap-3 md:grid-cols-3">
+                                    <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+                                        <div className="p-1.5 rounded-lg bg-blue-100">
+                                            <Target className="h-4 w-4 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm text-gray-900">Write your Story Arc</p>
+                                            <p className="text-xs text-gray-500">Share your journey, not just updates</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+                                        <div className="p-1.5 rounded-lg bg-emerald-100">
+                                            <Award className="h-4 w-4 text-emerald-600" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm text-gray-900">Add Your Voice</p>
+                                            <p className="text-xs text-gray-500">Configure your tone in Settings</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 p-3 bg-white rounded-lg">
+                                        <div className="p-1.5 rounded-lg bg-violet-100">
+                                            <Sparkles className="h-4 w-4 text-violet-600" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-sm text-gray-900">Test & Iterate</p>
+                                            <p className="text-xs text-gray-500">Edit AI output to match your style</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Quick Stats Row - Dynamic */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                     title="Posts This Week"
-                    value="3"
-                    trend="+2"
+                    value={postsThisWeek.toString()}
+                    trend={postsThisWeek > 0 ? `+${postsThisWeek}` : ""}
                     trendDirection="up"
-                    description="Keep the momentum going!"
+                    description={isNewUser ? "Start your first post!" : "Keep the momentum going!"}
                     icon={<FileText className="h-5 w-5 text-blue-500" />}
                 />
                 <StatCard
                     title="Total Impressions"
-                    value="1,247"
-                    trend="+18.2%"
+                    value={totalImpressions.toLocaleString()}
+                    trend={totalImpressions > 1000 ? "+18.2%" : ""}
                     trendDirection="up"
                     description="From your Threads posts"
                     icon={<Eye className="h-5 w-5 text-emerald-500" />}
                 />
                 <StatCard
                     title="Engagement Rate"
-                    value="4.8%"
-                    trend="+0.6%"
+                    value={`${engagementRate}%`}
+                    trend={engagementRate > 3 ? "+0.6%" : ""}
                     trendDirection="up"
                     description="Likes + comments / impressions"
                     icon={<Heart className="h-5 w-5 text-rose-500" />}
                 />
                 <StatCard
                     title="Connected Sources"
-                    value={isThreadsConnected ? "2" : "1"}
+                    value={connectedSourcesCount.toString()}
                     trend={isThreadsConnected ? "+1" : ""}
                     trendDirection="up"
                     description={isThreadsConnected ? "Manual + Threads" : "Manual input active"}
@@ -102,31 +212,18 @@ export default async function DashboardPage() {
                         </Link>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {/* Sample Posts - Will be dynamic */}
-                        <PostItem
-                            content="Just shipped a new AI feature for Aeden! It can now analyze your writing style from bookmarked creators 🚀"
-                            status="published"
-                            impressions={432}
-                            engagement={21}
-                            timeAgo="2 hours ago"
-                        />
-                        <PostItem
-                            content="Building in public update: Week 3 of working on the Threads integration. OAuth flow is tricky but almost there..."
-                            status="published"
-                            impressions={287}
-                            engagement={15}
-                            timeAgo="1 day ago"
-                        />
-                        <PostItem
-                            content="Quick tip: If you're a developer building in public, focus on ONE platform first. For me, it's Threads."
-                            status="draft"
-                            impressions={0}
-                            engagement={0}
-                            timeAgo="Draft"
-                        />
-
-                        {/* Empty State (show when no posts) */}
-                        {false && (
+                        {recentPosts.length > 0 ? (
+                            recentPosts.map((post) => (
+                                <PostItem
+                                    key={post.id}
+                                    content={post.content}
+                                    status={post.status}
+                                    impressions={post.impressions || 0}
+                                    engagement={post.engagement}
+                                    timeAgo={formatTimeAgo(post.created_at)}
+                                />
+                            ))
+                        ) : (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
                                 <div className="rounded-full bg-blue-50 p-4 mb-4">
                                     <Sparkles className="h-8 w-8 text-blue-500" />
@@ -148,6 +245,9 @@ export default async function DashboardPage() {
 
                 {/* Right Sidebar */}
                 <div className="space-y-6">
+                    {/* AI Strategy Advisor (Phase 10) */}
+                    <StrategyAdvisor initialStrategy={strategyInsights} />
+
                     {/* Quick Actions */}
                     <Card className="border-0 shadow-sm bg-white rounded-2xl">
                         <CardHeader className="pb-3">
@@ -397,4 +497,19 @@ function PostItem({
             </div>
         </div>
     );
+}
+
+function formatTimeAgo(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
 }
