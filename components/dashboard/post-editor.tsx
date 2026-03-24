@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -27,6 +27,28 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
     const router = useRouter();
 
     const [isPublishing, setIsPublishing] = useState(false);
+    const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
+
+    // Fetch user preferences for defaults
+    useEffect(() => {
+        async function fetchPrefs() {
+            try {
+                const response = await fetch("/api/user/preferences");
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.preferences) {
+                        if (data.preferences.tone) setTone(data.preferences.tone);
+                        if (data.preferences.preferred_ai_model) setPreferredAiModel(data.preferences.preferred_ai_model);
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to fetch preferences for editor defaults:", err);
+            } finally {
+                setIsLoadingPrefs(false);
+            }
+        }
+        fetchPrefs();
+    }, []);
 
     const handleGenerate = async () => {
         if (!input.trim()) return;
@@ -197,13 +219,16 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
             {/* Input Section */}
             <Card className="shadow-sm border-gray-200">
                 <CardHeader>
-                    <CardTitle>Input</CardTitle>
+                    <CardTitle className="flex items-center justify-between">
+                        Input
+                        {isLoadingPrefs && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                    </CardTitle>
                     <CardDescription>
                         Paste your updates, commit messages, or rough notes here.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className={cn("grid grid-cols-2 gap-4 transition-opacity", isLoadingPrefs ? "opacity-50 pointer-events-none" : "opacity-100")}>
                         <div className="space-y-2">
                             <Label className="text-xs font-medium">Tone</Label>
                             <Select value={tone} onValueChange={setTone}>

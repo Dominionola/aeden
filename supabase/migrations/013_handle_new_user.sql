@@ -1,25 +1,28 @@
 -- Migration: 013_handle_new_user
--- Creates a trigger to auto-insert user_preferences when a new user is created
+-- Automatically creates a default user_preferences row when a new user signs up.
 
--- Create or replace the function
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.user_preferences (user_id, user_type, categories, topics, auto_learn_persona, tone, preferred_ai_model)
+  INSERT INTO public.user_preferences (
+    user_id, 
+    user_type, 
+    tone, 
+    preferred_ai_model,
+    auto_learn_persona
+  )
   VALUES (
-    NEW.id,
-    'developer',
-    ARRAY[]::text[],
-    ARRAY[]::text[],
-    true,
-    'professional',
-    'gemini-2.0-flash'
+    new.id, 
+    'developer', 
+    'professional', 
+    'gemini-2.0-flash',
+    true
   );
-  RETURN NEW;
+  RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create trigger if it doesn't exist
+-- Trigger attached to auth.users
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

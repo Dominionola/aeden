@@ -12,24 +12,27 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { input, archetype, creatorBookmarks, brandGuidelines } = body;
+        const { input, archetype, creatorBookmarks, brandGuidelines, tone: bodyTone, preferred_ai_model: bodyModel } = body;
 
         if (!input) {
             return NextResponse.json({ error: "Input is required" }, { status: 400 });
         }
 
-        // Fetch user preferences for voice analysis if not provided in body
-        // In a real flow, we might fetch this from DB here if the FE didn't send it
-        const { data: prefs } = await supabase
+        // Fetch user preferences for fallback if not provided in body
+        const { data: prefs, error: dbError } = await supabase
             .from('user_preferences')
-            .select('voice_analysis, ai_context, brand_guidelines')
+            .select('voice_analysis, ai_context, brand_guidelines, tone, preferred_ai_model')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
+
+        if (dbError) {
+            console.warn("Could not fetch user preferences:", dbError.message);
+        }
 
         const options: GenerateOptions = {
             input,
-            tone: 'casual', // default ignored placeholder
-            model: 'gemini', // default since model selection is removed
+            tone: (bodyTone || prefs?.tone || 'professional') as GenerateOptions['tone'],
+            model: (bodyModel || prefs?.preferred_ai_model || 'gemini-2.0-flash') as AiModel,
             archetype,
             voiceAnalysis: prefs?.voice_analysis,
             aiContext: prefs?.ai_context,
@@ -41,7 +44,8 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             content,
-            model: options.model
+            model: options.model,
+            tone: options.tone
         });
 
     } catch (error) {
