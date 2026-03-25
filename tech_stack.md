@@ -32,10 +32,18 @@
 ## 4. AI & Intelligence
 - **Providers:** [Anthropic](https://www.anthropic.com) and [Google](https://ai.google.dev/)
 - **Models:**
-  - Claude 3.5 Sonnet (referred to as Sonnet 4 in SOP) - Persona Extraction & High-Quality Generation
+  
   - Gemini 2.0 Flash - Standard Fast Generation
   - text-embedding-004 (Google AI) - Vector Embeddings for RAG
 - **SDKs:** `@anthropic-ai/sdk`, `@google/generative-ai`
+- **Knowledge Vault:**
+  - `@extractus/article-extractor` - Web content extraction from URLs
+
+## 4.1 Knowledge Architect
+Specialized AI system for transforming content into structured intelligence modules:
+- System prompt for content refactoring
+- Structured output matching IntelligenceModule schema
+- Integration with existing Gemini/Claude clients
 
 ## 5. Third-Party Integrations (APIs)
 - **Meta Threads:** Threads API (v1.0)
@@ -80,6 +88,11 @@ npm install @supabase/supabase-js @supabase/ssr
 npm install @anthropic-ai/sdk
 ```
 
+### Knowledge Vault (Web Scraping)
+```bash
+npm install @extractus/article-extractor
+```
+
 ### Integration SDKs
 ```bash
 npm install octokit @notionhq/client
@@ -87,5 +100,5 @@ npm install octokit @notionhq/client
 
 ### Required shadcn Components (Base Set)
 ```bash
-npx shadcn@latest add button card input textarea badge avatar dropdown-menu dialog tabs select separator toast sonner skeleton switch label
+npx shadcn@latest add button card input textarea badge avatar dropdown-menu dialog tabs select separator toast sonner skeleton switch label collapsible scroll-area
 ```

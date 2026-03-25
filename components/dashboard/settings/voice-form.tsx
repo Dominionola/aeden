@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Sparkles, Save, Code, Palette, Briefcase, Video, Layers, TrendingUp, Landmark, Heart, Coffee, Loader2, RefreshCw, BrainCircuit, Type, FileText, ChevronDown, ChevronUp, Settings2, MessageSquare, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { KnowledgeVault } from "./knowledge/knowledge-vault";
 import {
     Select,
     SelectContent,
@@ -483,6 +484,9 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                             </div>
                             <Switch checked={autoLearn} onCheckedChange={setAutoLearn} />
                         </div>
+
+                        {/* Knowledge Vault */}
+                        <KnowledgeVault />
 
                         {/* Step 5: Tone & AI Model */}
                         <div className="space-y-4">

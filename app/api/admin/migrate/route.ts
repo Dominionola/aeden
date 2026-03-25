@@ -20,19 +20,40 @@ export async function POST(request: NextRequest) {
         { auth: { persistSession: false } }
     );
 
-    // Strip comments and split into individual statements
-    const statements = sql
-        .split("\n")
-        .filter(line => !line.trim().startsWith("--"))
-        .join("\n")
-        .split(";")
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
+    // Improved splitter that respects dollar-quoted strings ($$)
+    const statements: string[] = [];
+    let currentStatement = "";
+    let inDollarQuote = false;
 
-    const results: { statement: string; status: string; error?: string }[] = [];
+    const lines = sql.split("\n").filter(line => !line.trim().startsWith("--"));
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        // Check for dollar quotes
+        const dollarQuoteMatches = line.match(/\$\$/g);
+        if (dollarQuoteMatches && dollarQuoteMatches.length % 2 !== 0) {
+            inDollarQuote = !inDollarQuote;
+        }
+
+        currentStatement += line + "\n";
+
+        if (!inDollarQuote && trimmed.endsWith(";")) {
+            statements.push(currentStatement.trim());
+            currentStatement = "";
+        }
+    }
+
+    // Capture any remaining partial statement
+    if (currentStatement.trim()) {
+        statements.push(currentStatement.trim());
+    }
+
+    const results: { statement: string; status: string; error?: string; data?: any }[] = [];
 
     for (const statement of statements) {
-        const { error } = await supabaseAdmin.rpc("exec_sql", { sql_query: statement + ";" });
+        const { data: dbData, error } = await supabaseAdmin.rpc("exec_sql", { sql_query: statement });
 
         if (error) {
             if (error.message?.includes("Could not find the function") || error.code === "PGRST202") {
@@ -43,7 +64,7 @@ export async function POST(request: NextRequest) {
             }
             results.push({ statement: statement.substring(0, 80), status: "error", error: error.message });
         } else {
-            results.push({ statement: statement.substring(0, 80), status: "ok" });
+            results.push({ statement: statement.substring(0, 80), status: "ok", data: dbData });
         }
     }
 

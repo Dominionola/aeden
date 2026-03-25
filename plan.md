@@ -33,11 +33,12 @@
 | **Threads Publishing** | ✅ Complete | 100% | P0 |
 | **Post Listing** | ✅ Complete | 100% | P0 |
 | **Basic Analytics** | ✅ Complete | 100% | P0 |
-| **GitHub Integration** | ⏳ Not Started | 0% | P1 |
-| **Notion Integration** | ⏳ Not Started | 0% | P1 |
 | **Persona Training** | ✅ Complete | 100% | P1 |
+| **Knowledge Vault** | ✅ Complete | 100% | P1 |
+| **GitHub Integration** | ⏳ Not Started | 0% | P2 |
+| **Notion Integration** | ⏳ Not Started | 0% | P2 |
 
-**Overall MVP Progress: ~45%**  
+**Overall MVP Progress: ~50%**  
 **Target MVP Launch**: 8 weeks from project start (March 15, 2026)
 
 ---
@@ -202,6 +203,65 @@
   - Select repos to track
   - Manual sync button
   - Last synced timestamp
+
+---
+
+## ✅ PHASE 11: KNOWLEDGE VAULT (PRIORITY 1)
+
+> **Purpose**: Transform content sources (blog posts, articles, research) into structured "Intelligence Modules" that ground AI-generated posts in real knowledge.
+
+### Layer 1: Knowledge Architect (MVP) ✅
+- [x] `lib/ai/knowledge-architect.ts` - System prompt for content refactoring
+- [x] `app/api/knowledge/route.ts` - Ingest new source (URL → Refactor → Save)
+- [x] `app/api/knowledge/[id]/route.ts` - Get/Update/Delete single entry
+- [x] `supabase/migrations/014_knowledge_vault.sql` - Database table
+
+### Layer 2: Content Ingestion (MVP) ✅
+- [x] `lib/web-scraper/client.ts` - Fetch article content from URLs
+- [x] Support for web URLs (articles, blog posts)
+- [x] Metadata extraction (title, author, published date)
+
+### Layer 3: Intelligence Display (MVP) ✅
+- [x] `components/dashboard/settings/knowledge-vault.tsx` - UI in Voice/Persona tab
+  - Source list with tags
+  - Intelligence preview cards
+  - Add/Remove sources
+  - Select active sources for generation
+
+### Layer 4: RAG Integration (MVP) ✅
+- [x] `app/api/knowledge/recall/route.ts` - Fetch context for generation
+- [x] `lib/ai/context-builder.ts` - Inject knowledge context into prompts
+- [x] Top 10 most-used vault entries feed into generation
+
+### Knowledge Architect Output Schema
+```typescript
+interface IntelligenceModule {
+  metadata: {
+    source_title: string;
+    primary_niche: string;
+    complexity_level: "Beginner" | "Intermediate" | "Expert";
+  };
+  voice_analysis: {
+    tone_markers: string[];
+    vocabulary_preferences: string[];
+    sentence_structure: string;
+  };
+  intelligence_blocks: [{
+    thesis: string;
+    supporting_data: string[];
+    threads_hook_draft: string;
+  }];
+  contrarian_takes: string[];
+  suggested_hashtags_and_keywords: string[];
+}
+```
+
+### User Flow
+1. User pastes article URL in Knowledge Vault section
+2. System fetches content + refactors via Knowledge Architect
+3. Structured Intelligence Module saved to database
+4. During generation, relevant vault entries injected as context
+5. Generated posts grounded in user's actual expertise/research
 
 ---
 
@@ -503,22 +563,44 @@ BUSINESS ($79/month):
 
 ## 📝 NEXT IMMEDIATE STEPS
 
-### This Week (Week 3):
+### Completed (Week 3-4):
 - [x] Build `app/api/upload/route.ts` (image upload to Supabase Storage)
 - [x] Build `app/api/posts/route.ts` (CRUD operations)
 - [x] Build `app/dashboard/posts/page.tsx` (post listing)
 - [x] Build `app/dashboard/posts/[id]/page.tsx` (edit post)
 - [x] Set Up Meta Developer Account for Threads
-
-### Next Week (Week 4):
 - [x] Build Threads OAuth flow
-- [ ] Build `lib/threads/client.ts` (Publishing logic pending)
-- [ ] Build `app/api/posts/publish/route.ts`
-- [ ] Test end-to-end: Manual input → Generate → Publish
+- [x] Build Threads Publishing (client + API)
+- [x] Build Knowledge Vault (Phase 11)
+
+### Phase 11: Knowledge Vault - Implementation Details
+
+**Database Migration:**
+- `supabase/migrations/014_knowledge_vault.sql` - Creates `knowledge_vault` table with JSONB columns for structured intelligence
+
+**API Routes:**
+- `app/api/knowledge/route.ts` - GET (list) / POST (ingest new source)
+- `app/api/knowledge/[id]/route.ts` - GET / PATCH / DELETE single entry
+- `app/api/knowledge/recall/route.ts` - Fetch context for generation (RAG)
+
+**Libraries:**
+- `lib/ai/knowledge-architect.ts` - Knowledge Architect prompt + refactoring logic
+- `lib/web-scraper/client.ts` - URL content fetching via @extractus/article-extractor
+
+**UI Component:**
+- `components/dashboard/settings/knowledge-vault.tsx` - Integrated into Voice/Persona tab
+  - Add source (URL input)
+  - Source list with status
+  - Intelligence preview
+  - Select active sources
+
+### Next Phase (Week 5):
+- [ ] GitHub Integration OAuth + sync
+- [ ] Notion Integration OAuth + sync
 
 ---
 
-*Last Updated: February 10, 2026*  
+*Last Updated: March 25, 2026*  
 *Project Start: January 20, 2026*  
 *Target MVP Launch: March 15, 2026 (8 weeks)*  
-*Current Week: Week 4*
+*Current Week: Week 5*

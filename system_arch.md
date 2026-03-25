@@ -30,7 +30,8 @@ aeden/
 │   │   ├── generate/route.ts     # AI generation
 │   │   ├── posts/
 │   │   │   ├── route.ts          # CRUD posts
-│   │   │   └── publish/route.ts  # Publish to Threads
+│   │   │   ├── publish/route.ts  # Publish to Threads
+│   │   │   └── sync-engagement/route.ts
 │   │   ├── threads/
 │   │   │   ├── auth/route.ts
 │   │   │   └── callback/route.ts
@@ -40,6 +41,12 @@ aeden/
 │   │   ├── notion/
 │   │   │   ├── auth/route.ts
 │   │   │   └── sync/route.ts
+│   │   ├── knowledge/             # Knowledge Vault API
+│   │   │   ├── route.ts         # List/Create sources
+│   │   │   ├── recall/route.ts  # Context fetch for RAG
+│   │   │   └── [id]/route.ts    # Get/Update/Delete
+│   │   ├── persona/
+│   │   │   └── strategy/route.ts # AI Strategy Analysis
 │   │   ├── preferences/route.ts
 │   │   └── upload/route.ts
 │   ├── layout.tsx                # Root layout
@@ -62,7 +69,12 @@ aeden/
 │   │   ├── google.ts             # Gemini client
 │   │   ├── anthropic.ts          # Claude client
 │   │   ├── client.ts             # Unified interface
-│   │   └── prompts.ts            # Generation prompts
+│   │   ├── prompts.ts            # Generation prompts
+│   │   ├── templates.ts          # Post generation templates
+│   │   ├── knowledge-architect.ts # Content refactoring AI
+│   │   └── context-builder.ts    # RAG context assembly
+│   ├── web-scraper/
+│   │   └── client.ts             # URL content fetching
 │   ├── threads/
 │   │   └── client.ts             # Threads API
 │   ├── github/
@@ -212,6 +224,74 @@ Aeden uses a **Hybrid Pattern Extraction + RAG** approach to continuously learn 
 
 ---
 
+## Knowledge Vault Architecture (Phase 11)
+
+The Knowledge Vault enables users to ingest content sources (blog posts, articles, research) and transform them into structured "Intelligence Modules" that ground AI-generated posts in real knowledge.
+
+### Data Flow
+```
+┌──────────────┐     ┌──────────────┐     ┌─────────────────┐
+│  User Input  │────▶│ Web Scraper  │────▶│ Knowledge       │
+│  (URL)       │     │ (Fetch)      │     │ Architect (AI)  │
+└──────────────┘     └──────────────┘     └────────┬────────┘
+                                                   │
+                                                   ▼
+┌──────────────┐     ┌──────────────┐     ┌─────────────────┐
+│  Generation  │◀────│ Recall API   │◀────│  Supabase       │
+│  Context     │     │ (RAG)        │     │  knowledge_vault│
+└──────────────┘     └──────────────┘     └─────────────────┘
+```
+
+### Knowledge Architect System
+
+The Knowledge Architect is a specialized AI prompt that deconstructs long-form content into high-density intelligence modules:
+
+```typescript
+// lib/ai/knowledge-architect.ts
+const KNOWLEDGE_ARCHITECT_PROMPT = `You are the Aeden Knowledge Architect.
+Extract the "DNA" of content for Threads-optimized generation:
+
+1. HOOKS: Identify 5 scroll-stopping hooks
+2. THESES: Break into 3-5 standalone points (max 280 chars)
+3. DATA: Extract every metric, date, name, percentage
+4. VOICE: Analyze author's tone markers
+5. FRAMEWORKS: Map to proven structures (Mistake/Solution, Roadmap, etc.)
+
+Output: Structured JSON matching IntelligenceModule schema`;
+```
+
+### Intelligence Module Schema
+```typescript
+interface IntelligenceModule {
+  metadata: {
+    source_title: string;
+    primary_niche: string;
+    complexity_level: "Beginner" | "Intermediate" | "Expert";
+  };
+  voice_analysis: {
+    tone_markers: string[];
+    vocabulary_preferences: string[];
+    sentence_structure: "Short/Punchy" | "Academic/Long";
+  };
+  intelligence_blocks: [{
+    thesis: string;
+    supporting_data: string[];
+    threads_hook_draft: string;
+  }];
+  contrarian_takes: string[];
+  suggested_hashtags_and_keywords: string[];
+}
+```
+
+### Context Injection
+When generating posts, the system:
+1. Fetches user's active vault entries (last 10 by usage)
+2. Filters by relevance to current input
+3. Injects structured intelligence into generation prompt
+4. Tracks usage count for future relevance ranking
+
+---
+
 ## API Design
 
 ### Route Handler Pattern
@@ -340,14 +420,32 @@ This specific order ensures dependencies (tables exist before policies/triggers)
        │ category        │ │ original_ai...│
        │ topics          │ │ user_edited...│
        │ refinement      │ │ changes (JSON)│
-       │ ai_context      │ └───────────────┘
-       └─────────────────┘
+        │ ai_context      │ └───────────────┘
+        └─────────────────┘
+                      │
+               ┌───────┴────────┐
+               │ knowledge_vault │
+               │────────────────│
+               │ id              │
+               │ user_id (FK)    │
+               │ source_title    │
+               │ source_url      │
+               │ source_type     │
+               │ metadata (JSON) │
+               │ voice_analysis  │
+               │ intelligence_blks│
+               │ tags            │
+               │ times_used      │
+               └────────────────┘
 ```
 
 ### Row Level Security (RLS)
 All tables enforce user isolation:
 ```sql
 CREATE POLICY "users_own_data" ON posts
+  FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "users_own_vault" ON knowledge_vault
   FOR ALL USING (auth.uid() = user_id);
 ```
 

@@ -135,6 +135,44 @@ export interface PostEdit {
     updated_at: string;
 }
 
+export interface KnowledgeVault {
+    id: string;
+    user_id: string;
+    source_title: string;
+    source_url: string | null;
+    source_type: "web" | "pdf" | "manual";
+    source_content: string | null;
+    metadata: IntelligenceMetadata;
+    voice_analysis: IntelligenceVoiceAnalysis;
+    intelligence_blocks: IntelligenceBlock[];
+    contrarian_takes: string[];
+    suggested_hashtags: string[];
+    tags: string[];
+    is_active: boolean;
+    times_used: number;
+    last_used_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface IntelligenceMetadata {
+    source_title: string;
+    primary_niche: string;
+    complexity_level: "Beginner" | "Intermediate" | "Expert";
+}
+
+export interface IntelligenceVoiceAnalysis {
+    tone_markers: string[];
+    vocabulary_preferences: string[];
+    sentence_structure: "Short/Punchy" | "Academic/Long";
+}
+
+export interface IntelligenceBlock {
+    thesis: string;
+    supporting_data: string[];
+    threads_hook_draft: string;
+}
+
 // Supabase Database type for type-safe queries
 export interface Database {
     public: {
@@ -175,6 +213,11 @@ export interface Database {
                 };
                 Insert: Omit<Database["public"]["Tables"]["follower_snapshots"]["Row"], "id" | "created_at">;
                 Update: Partial<Database["public"]["Tables"]["follower_snapshots"]["Row"]>;
+            };
+            knowledge_vault: {
+                Row: KnowledgeVault;
+                Insert: Omit<KnowledgeVault, "id" | "created_at" | "updated_at" | "times_used" | "last_used_at">;
+                Update: Partial<Omit<KnowledgeVault, "id" | "created_at" | "updated_at">>;
             };
         };
     };

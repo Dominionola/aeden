@@ -19,6 +19,7 @@ export interface GeminiGenerateOptions {
     brandGuidelines?: string;
     maxTokens?: number;
     aiContext?: string | null;
+    knowledgeContext?: string | null;
 }
 
 function getClient() {
@@ -36,6 +37,7 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
         tone,
         voiceAnalysis,
         aiContext,
+        knowledgeContext,
         creatorBookmarks,
         brandGuidelines,
         maxTokens = 1000
@@ -45,6 +47,10 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
 
     // Build persona context
     let personaContext = "";
+
+    if (knowledgeContext) {
+        personaContext += `\n\n${knowledgeContext}`;
+    }
 
     if (voiceAnalysis) {
         personaContext += `\n\nWriter's voice characteristics:
