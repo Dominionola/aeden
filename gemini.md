@@ -16,6 +16,33 @@
 
 ---
 
+### March 25, 2026 - Gemini Native File Support (Phase 11 Extension)
+
+**What was done:**
+- Implemented **Gemini Native File Handling** for the Knowledge Vault
+- Created `lib/ai/file-extractor.ts` to leverage Gemini 2.0 Flash for PDF and Image extraction
+- Updated `app/api/knowledge/process-file/route.ts` to support multi-modal ingestion (PDF, PNG, JPG, Text)
+- Integrated file processing into `KnowledgeVault.tsx` UI with real-time extraction feedback
+- Fixed syntax errors in `test/knowledge_vault.test.ts` and verified the RAG injection logic
+- Optimized `tech_stack.md` by removing `pdf-parse` in favor of zero-dependency AI-native parsing
+
+**Files modified:**
+- `lib/ai/file-extractor.ts` [NEW]
+- `app/api/knowledge/process-file/route.ts`
+- `components/dashboard/settings/knowledge/knowledge-vault.tsx`
+- `test/knowledge_vault.test.ts`
+- `plan.md`
+- `tech_stack.md`
+- `system_arch.md`
+
+**Status:**
+- Phase 11 Knowledge Vault ✅ Complete (Advanced)
+- Scraper ✅ Verified
+- File Extraction ✅ Verified (Gemini Native)
+- Ready for Phase 6 (GitHub Integration)
+
+---
+
 ### March 25, 2026 - Knowledge Vault Verification (Phase 11)
 
 **What was done:**

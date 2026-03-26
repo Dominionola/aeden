@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { 
     BookOpen, 
     Plus, 
@@ -20,9 +29,34 @@ import {
     Sparkles,
     Lightbulb,
     Tag,
-    CheckCircle2
+    CheckCircle2,
+    Search,
+    Globe,
+    Link,
+    Triangle,
+    ArrowRight,
+    Clipboard,
+    Upload,
+    FileText,
+    File,
+    X,
+    CloudUpload
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const ACCEPTED_FILE_TYPES = {
+    "application/pdf": ".pdf",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+    "text/plain": ".txt",
+    "text/markdown": ".md",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+};
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface IntelligenceBlock {
     thesis: string;
@@ -60,8 +94,16 @@ export function KnowledgeVault() {
     const [isExpanded, setIsExpanded] = useState(false);
     const [sources, setSources] = useState<VaultSource[]>([]);
     const [urlInput, setUrlInput] = useState("");
+    const [manualText, setManualText] = useState("");
     const [isIngesting, setIsIngesting] = useState(false);
+    const [isManualOpen, setIsManualOpen] = useState(false);
     const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // File upload state
+    const [isDragging, setIsDragging] = useState(false);
+    const [uploadingFiles, setUploadingFiles] = useState<Array<{ name: string; progress: number; error?: string }>>([]);
+    const urlInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchSources();
@@ -105,6 +147,224 @@ export function KnowledgeVault() {
         } finally {
             setIsIngesting(false);
         }
+    };
+
+    const handleManualIngest = async () => {
+        if (!manualText.trim()) return;
+
+        setIsIngesting(true);
+        try {
+            const res = await fetch("/api/knowledge", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    source_content: manualText,
+                    source_title: "Manual Context (" + new Date().toLocaleDateString() + ")"
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || "Failed to ingest");
+            }
+
+            toast.success("Manual context saved!");
+            setManualText("");
+            setIsManualOpen(false);
+            fetchSources();
+        } catch (err: any) {
+            toast.error("Failed to save context", { description: err.message });
+        } finally {
+            setIsIngesting(false);
+        }
+    };
+
+    // File upload handlers
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+            handleFilesUpload(files);
+        }
+    }, []);
+
+    const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            handleFilesUpload(files);
+        }
+        // Reset input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    }, []);
+
+    const handleFilesUpload = async (files: File[]) => {
+        const validFiles = files.filter(file => {
+            const isValidType = Object.keys(ACCEPTED_FILE_TYPES).includes(file.type) || 
+                                 file.type.startsWith("text/") ||
+                                 file.type === "application/pdf" ||
+                                 file.type.includes("word");
+            const isValidSize = file.size <= MAX_FILE_SIZE;
+            
+            if (!isValidType) {
+                toast.error(`${file.name}: Unsupported file type`);
+                return false;
+            }
+            if (!isValidSize) {
+                toast.error(`${file.name}: File too large (max 10MB)`);
+                return false;
+            }
+            return true;
+        });
+
+        if (validFiles.length === 0) return;
+
+        // Initialize upload tracking
+        const uploadTracks = validFiles.map(file => ({ name: file.name, progress: 0 }));
+        setUploadingFiles(uploadTracks);
+
+        for (let i = 0; i < validFiles.length; i++) {
+            const file = validFiles[i];
+            try {
+                setUploadingFiles(prev => 
+                    prev.map((f, idx) => idx === i ? { ...f, progress: 10 } : f)
+                );
+
+                let content = "";
+                let fileTitle = file.name.replace(/\.[^/.]+$/, "");
+
+                // For PDFs, images, and other complex files, use server-side processing
+                if (file.type === "application/pdf" || 
+                    file.type.startsWith("image/") ||
+                    file.type.includes("word") ||
+                    file.name.endsWith(".docx")) {
+                    
+                    setUploadingFiles(prev => 
+                        prev.map((f, idx) => idx === i ? { ...f, progress: 30 } : f)
+                    );
+
+                    // Upload to server for processing
+                    const uploadFormData = new FormData();
+                    uploadFormData.append("file", file);
+
+                    const processRes = await fetch("/api/knowledge/process-file", {
+                        method: "POST",
+                        body: uploadFormData,
+                    });
+
+                    if (!processRes.ok) {
+                        const data = await processRes.json();
+                        throw new Error(data.error || "Failed to process file");
+                    }
+
+                    const processData = await processRes.json();
+                    content = processData.content;
+                    fileTitle = processData.fileName || fileTitle;
+
+                } else {
+                    // For text files, read client-side
+                    setUploadingFiles(prev => 
+                        prev.map((f, idx) => idx === i ? { ...f, progress: 40 } : f)
+                    );
+                    content = await readFileContent(file);
+                }
+
+                setUploadingFiles(prev => 
+                    prev.map((f, idx) => idx === i ? { ...f, progress: 70 } : f)
+                );
+
+                // Send extracted content to knowledge vault
+                const res = await fetch("/api/knowledge", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        source_content: content,
+                        source_title: fileTitle,
+                        source_type: file.type === "application/pdf" ? "pdf" : 
+                                     file.type.startsWith("image/") ? "image" : "manual",
+                    }),
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.error || "Failed to save");
+                }
+
+                setUploadingFiles(prev =>
+                    prev.map((f, idx) => idx === i ? { ...f, progress: 100 } : f)
+                );
+
+                toast.success(`${file.name} uploaded!`);
+
+            } catch (err: any) {
+                setUploadingFiles(prev =>
+                    prev.map((f, idx) => idx === i ? { ...f, error: err.message } : f)
+                );
+                toast.error(`Failed to upload ${file.name}`);
+            }
+        }
+
+        // Clear upload tracking after delay
+        setTimeout(() => {
+            setUploadingFiles([]);
+            fetchSources();
+        }, 1500);
+    };
+
+    const readFileContent = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            // For text-based files
+            if (file.type.startsWith("text/") || 
+                file.type === "application/json" ||
+                file.name.endsWith(".md")) {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = () => reject(new Error("Failed to read file"));
+                reader.readAsText(file);
+            }
+            // For images, we'll extract text via AI vision in future
+            else if (file.type.startsWith("image/")) {
+                resolve(`[Image file: ${file.name} - Image analysis with AI vision coming soon]`);
+            }
+            // PDF should be handled server-side
+            else if (file.type === "application/pdf") {
+                reject(new Error("PDF should be processed server-side"));
+            }
+            else {
+                reject(new Error("Unsupported file type"));
+            }
+        });
+    };
+
+    const handleUploadButtonClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleWebsitesClick = () => {
+        urlInputRef.current?.focus();
+        urlInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    const handleDriveClick = () => {
+        toast.info("Google Drive integration coming soon!", {
+            description: "We'll notify you when this feature is available.",
+        });
     };
 
     const handleDelete = async (id: string) => {
@@ -163,40 +423,190 @@ export function KnowledgeVault() {
                 </div>
 
                 <CollapsibleContent className="space-y-4 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    {/* URL Input */}
-                    <Card className="border-dashed border-2 bg-gray-50/50">
-                        <CardContent className="p-4">
-                            <div className="space-y-3">
-                                <div className="flex gap-2">
-                                    <Input
-                                        placeholder="Paste article URL to extract intelligence..."
-                                        value={urlInput}
-                                        onChange={(e) => setUrlInput(e.target.value)}
-                                        className="flex-1 h-9 text-sm"
-                                        onKeyDown={(e) => e.key === "Enter" && handleIngest()}
-                                    />
+                    {/* New Intake Interface - Light Mode */}
+                    <div className="space-y-6">
+                        {/* URL/Search Bar */}
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-primary-500/5 rounded-2xl blur-xl transition-all duration-300 group-focus-within:bg-primary-500/10" />
+                            <div className="relative flex items-center gap-2 p-2 bg-white border border-gray-200 rounded-2xl shadow-sm transition-all duration-300 focus-within:border-primary-500/50">
+                                <Search className="ml-3 h-5 w-5 text-gray-400" />
+                                <Input
+                                    ref={urlInputRef}
+                                    placeholder="Search the web for new sources"
+                                    value={urlInput}
+                                    onChange={(e) => setUrlInput(e.target.value)}
+                                    className="flex-1 bg-transparent border-none text-gray-900 placeholder:text-gray-400 focus-visible:ring-0 focus-visible:ring-offset-0 h-10"
+                                    onKeyDown={(e) => e.key === "Enter" && handleIngest()}
+                                />
+                                
+                                <div className="flex items-center gap-1.5 px-1.5">
                                     <Button 
-                                        onClick={handleIngest} 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-8 rounded-lg bg-gray-50 text-gray-600 hover:text-gray-900 border border-gray-200"
+                                        onClick={handleWebsitesClick}
+                                    >
+                                        <Globe className="h-3.5 w-3.5 mr-1.5" />
+                                        Web
+                                        <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-50" />
+                                    </Button>
+                                    <Button 
+                                        onClick={handleIngest}
                                         disabled={isIngesting || !urlInput.trim()}
-                                        size="sm"
-                                        className="h-9 bg-primary-600 hover:bg-primary-700"
+                                        size="icon" 
+                                        className="h-8 w-8 rounded-full bg-primary-600 hover:bg-primary-700 transition-all shrink-0 ml-1 text-white"
                                     >
                                         {isIngesting ? (
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                         ) : (
-                                            <>
-                                                <Plus className="h-4 w-4 mr-1" />
-                                                Add
-                                            </>
+                                            <ArrowRight className="h-4 w-4" />
                                         )}
                                     </Button>
                                 </div>
-                                <p className="text-[10px] text-muted-foreground">
-                                    Paste a blog post, article, or research URL. Aeden will extract key insights and structure them for post generation.
-                                </p>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+
+                        {/* Drop Zone & Category Actions */}
+                        <div 
+                            className={cn(
+                                "relative overflow-hidden rounded-3xl border-2 bg-white shadow-sm transition-all duration-300",
+                                isDragging 
+                                    ? "border-primary-500 bg-primary-50 scale-[1.02]" 
+                                    : "border-gray-200 hover:border-gray-300"
+                            )}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                        >
+                            {/* Hidden file input */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept={Object.values(ACCEPTED_FILE_TYPES).join(",")}
+                                multiple
+                                className="hidden"
+                                onChange={handleFileSelect}
+                            />
+                            <div className="px-6 py-12 md:py-16 text-center space-y-4">
+                                {/* Uploading files indicator */}
+                                {uploadingFiles.length > 0 && (
+                                    <div className="space-y-3 mb-6">
+                                        {uploadingFiles.map((file, idx) => (
+                                            <div key={idx} className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 max-w-sm mx-auto">
+                                                <FileText className="h-5 w-5 text-primary-500 flex-shrink-0" />
+                                                <div className="flex-1 text-left">
+                                                    <p className="text-sm font-medium text-gray-700 truncate">{file.name}</p>
+                                                    {file.error ? (
+                                                        <p className="text-xs text-red-500">{file.error}</p>
+                                                    ) : file.progress === 100 ? (
+                                                        <p className="text-xs text-green-600">Complete!</p>
+                                                    ) : (
+                                                        <p className="text-xs text-gray-500">{file.progress === 50 ? "Processing..." : "Uploading..."}</p>
+                                                    )}
+                                                </div>
+                                                {file.progress === 100 && !file.error && (
+                                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className={cn("space-y-2 transition-opacity", uploadingFiles.length > 0 && "opacity-50")}>
+                                    <div className="mx-auto w-16 h-16 rounded-full bg-primary-100 flex items-center justify-center">
+                                        <CloudUpload className={cn(
+                                            "h-8 w-8 text-primary-600 transition-transform",
+                                            isDragging && "scale-110"
+                                        )} />
+                                    </div>
+                                    <h4 className={cn(
+                                        "text-xl md:text-2xl font-semibold tracking-tight transition-colors",
+                                        isDragging ? "text-primary-600" : "text-gray-900"
+                                    )}>
+                                        {isDragging ? "Drop files here" : "or drop your files"}
+                                    </h4>
+                                    <p className="text-sm text-gray-500">
+                                        pdf, images, docs, <span className="underline underline-offset-4 decoration-gray-200">and more</span>
+                                    </p>
+                                </div>
+
+                                <div className="pt-8 flex flex-wrap justify-center gap-3">
+                                    <Button 
+                                        variant="ghost" 
+                                        onClick={handleUploadButtonClick}
+                                        className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-2xl h-11 px-6 transition-all hover:scale-105 active:scale-95"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Upload files
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        onClick={handleWebsitesClick}
+                                        className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-2xl h-11 px-6 transition-all hover:scale-105 active:scale-95"
+                                    >
+                                        <Link className="h-4 w-4 mr-2 text-primary-500" />
+                                        Websites
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        onClick={handleDriveClick}
+                                        className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-2xl h-11 px-6 transition-all hover:scale-105 active:scale-95"
+                                    >
+                                        <Triangle className="h-4 w-4 mr-2 rotate-180" />
+                                        Drive
+                                    </Button>
+                                    <Button 
+                                        variant="ghost" 
+                                        onClick={() => setIsManualOpen(true)}
+                                        className="bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-2xl h-11 px-6 transition-all hover:scale-105 active:scale-95"
+                                    >
+                                        <Clipboard className="h-4 w-4 mr-2" />
+                                        Copied text
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Decorative Dashed Border Overlay */}
+                            <div className="absolute inset-4 pointer-events-none border-2 border-dashed border-gray-100 rounded-2xl" />
+                        </div>
+                    </div>
+
+                    {/* Manual Intake Dialog - Light Mode */}
+                    <Dialog open={isManualOpen} onOpenChange={setIsManualOpen}>
+                        <DialogContent className="sm:max-w-[500px] bg-white border-gray-200 text-gray-900 shadow-xl">
+                            <DialogHeader>
+                                <DialogTitle className="text-xl font-bold text-gray-900">Manual Intelligence Intake</DialogTitle>
+                                <DialogDescription className="text-gray-500">
+                                    Paste a long-form text, research notes, or a thread you want to deconstruct into your knowledge base.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                                <Textarea
+                                    placeholder="Paste your content here..."
+                                    value={manualText}
+                                    onChange={(e) => setManualText(e.target.value)}
+                                    className="min-h-[300px] bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-primary-500 rounded-xl"
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button 
+                                    variant="ghost" 
+                                    onClick={() => setIsManualOpen(false)}
+                                    className="text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button 
+                                    onClick={handleManualIngest}
+                                    disabled={isIngesting || !manualText.trim()}
+                                    className="bg-primary-600 hover:bg-primary-700 text-white gap-2 shadow-sm"
+                                >
+                                    {isIngesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                                    Save Intelligence
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
 
                     {/* Sources List */}
                     {isLoading ? (

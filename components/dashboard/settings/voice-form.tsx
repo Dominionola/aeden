@@ -485,9 +485,6 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                             <Switch checked={autoLearn} onCheckedChange={setAutoLearn} />
                         </div>
 
-                        {/* Knowledge Vault */}
-                        <KnowledgeVault />
-
                         {/* Step 5: Tone & AI Model */}
                         <div className="space-y-4">
                             <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -552,6 +549,10 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                         </h2>
                         <p className="text-xs text-muted-foreground">Test how your persona speaks.</p>
                     </div>
+
+                    {/* Knowledge Vault - Now in Playground */}
+                    <KnowledgeVault />
+
                     <Card className="border-primary-100 shadow-sm">
                         <CardContent className="p-6 space-y-4">
                             <div className="space-y-2">

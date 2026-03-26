@@ -31,12 +31,11 @@ export async function POST(request: NextRequest) {
         const trimmed = line.trim();
         if (!trimmed) continue;
 
-        // Check for dollar quotes
-        const dollarQuoteMatches = line.match(/\$\$/g);
+        // Check for dollar quotes (including labeled variants like $tag$)
+        const dollarQuoteMatches = line.match(/\$[a-zA-Z_]*\$/g);
         if (dollarQuoteMatches && dollarQuoteMatches.length % 2 !== 0) {
             inDollarQuote = !inDollarQuote;
         }
-
         currentStatement += line + "\n";
 
         if (!inDollarQuote && trimmed.endsWith(";")) {

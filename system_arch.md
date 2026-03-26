@@ -72,7 +72,8 @@ aeden/
 │   │   ├── prompts.ts            # Generation prompts
 │   │   ├── templates.ts          # Post generation templates
 │   │   ├── knowledge-architect.ts # Content refactoring AI
-│   │   └── context-builder.ts    # RAG context assembly
+│   │   ├── context-builder.ts    # RAG context assembly
+│   │   └── file-extractor.ts     # Gemini-native PDF/Image extraction
 │   ├── web-scraper/
 │   │   └── client.ts             # URL content fetching
 │   ├── threads/
@@ -289,6 +290,21 @@ When generating posts, the system:
 2. Filters by relevance to current input
 3. Injects structured intelligence into generation prompt
 4. Tracks usage count for future relevance ranking
+
+### File Processing (Gemini Native)
+The Knowledge Vault supports file uploads with AI-powered extraction:
+
+| File Type | Processing Method | Notes |
+|-----------|------------------|-------|
+| PDF | Gemini 2.0 Flash (native) | Layout-aware text extraction |
+| Images | Gemini Vision | Text extraction + visual description |
+| Text | Client-side read | .txt, .md, .json files |
+| Word Docs | Placeholder | Convert to PDF for best results |
+
+**Implementation**: `lib/ai/file-extractor.ts`
+- Uses Gemini's inline data handling for PDF/image processing
+- No additional dependencies (uses existing `@google/generative-ai` SDK)
+- Better quality than traditional PDF parsers (layout, tables, images preserved)
 
 ---
 

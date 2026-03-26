@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS knowledge_vault (
     -- Source Information
     source_title TEXT NOT NULL,
     source_url TEXT,
-    source_type TEXT CHECK (source_type IN ('web', 'pdf', 'manual')) DEFAULT 'web',
+    source_type TEXT CHECK (source_type IN ('web', 'pdf', 'image', 'manual')) DEFAULT 'web',
     source_content TEXT,
     
     -- Refactored Intelligence (from Knowledge Architect AI)

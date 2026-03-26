@@ -79,7 +79,16 @@ export async function POST(request: NextRequest) {
         sourceType = "manual";
     }
 
-    const intelligence = await refactorContent(contentToRefactor, resolvedTitle);
+    let intelligence;
+    try {
+        intelligence = await refactorContent(contentToRefactor, resolvedTitle);
+    } catch (err) {
+        console.error("Failed to process content with AI:", err);
+        return NextResponse.json(
+            { error: "Failed to process content" },
+            { status: 502 }
+        );
+    }
 
     const { data, error } = await supabase
         .from("knowledge_vault")

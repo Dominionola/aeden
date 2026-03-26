@@ -88,10 +88,13 @@ npm install @supabase/supabase-js @supabase/ssr
 npm install @anthropic-ai/sdk
 ```
 
-### Knowledge Vault (Web Scraping)
+### Knowledge Vault (Web Scraping & File Processing)
 ```bash
 npm install @extractus/article-extractor
 ```
+- **PDF/Image Processing**: Uses Gemini 2.0 Flash native file handling (no extra dependency)
+  - PDFs: Gemini extracts text with proper layout understanding
+  - Images: Gemini Vision extracts text/describes visual content
 
 ### Integration SDKs
 ```bash
