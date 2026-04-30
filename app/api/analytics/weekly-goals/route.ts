@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+
+export const maxDuration = 60; // Prevent Vercel 504 timeouts
+
 import Groq from "groq-sdk";
 
 function getGroqClient() {

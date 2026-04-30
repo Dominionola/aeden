@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+
+export const maxDuration = 60; // Prevent Vercel 504 timeouts
+
 import Groq from "groq-sdk";
 
 // Initialize Groq
@@ -112,7 +115,14 @@ ${JSON.stringify(recentPosts.map(p => ({
         });
 
         const responseText = result.choices[0]?.message?.content?.trim() || "{}";
-        const parsedData = JSON.parse(responseText);
+        
+        let parsedData;
+        try {
+            parsedData = JSON.parse(responseText);
+        } catch (e) {
+            console.error("Failed to parse Groq response:", responseText);
+            return NextResponse.json({ error: "Invalid JSON response from AI" }, { status: 500 });
+        }
 
         return NextResponse.json(parsedData);
 
