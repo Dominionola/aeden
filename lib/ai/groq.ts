@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { getSystemPrompt, getUserPrompt } from "./prompts";
 import { type AiArchetype } from "./client";
 
-export interface GeminiGenerateOptions {
+export interface GroqGenerateOptions {
     input: string;
     tone: string;
     archetype?: AiArchetype;
@@ -20,18 +20,19 @@ export interface GeminiGenerateOptions {
     maxTokens?: number;
     aiContext?: string | null;
     knowledgeContext?: string | null;
+    useFastModel?: boolean;
 }
 
 function getClient() {
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-        throw new Error("GOOGLE_GENERATIVE_AI_API_KEY environment variable is required");
+        throw new Error("GROQ_API_KEY environment variable is required");
     }
-    return new GoogleGenerativeAI(apiKey);
+    return new Groq({ apiKey });
 }
 
-export async function generateWithGemini(options: GeminiGenerateOptions): Promise<string> {
-    const genAI = getClient();
+export async function generateWithGroq(options: GroqGenerateOptions): Promise<string> {
+    const groq = getClient();
     const {
         input,
         tone,
@@ -40,12 +41,11 @@ export async function generateWithGemini(options: GeminiGenerateOptions): Promis
         knowledgeContext,
         creatorBookmarks,
         brandGuidelines,
-        maxTokens = 1000
+        maxTokens = 1000,
+        useFastModel = false
     } = options;
 
     const charLimit = 500;
-
-    // Build persona context
     let personaContext = "";
 
     if (knowledgeContext) {
@@ -71,24 +71,20 @@ Study their patterns but maintain the user's authentic voice and the template's 
     const systemPrompt = getSystemPrompt(aiContext, brandGuidelines, personaContext);
     const userPrompt = getUserPrompt(input, tone);
 
-    const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
-        systemInstruction: systemPrompt
-    });
+    const modelName = useFastModel ? "llama-3.1-8b-instant" : "llama-3.3-70b-versatile";
 
     try {
-        const result = await model.generateContent({
-            contents: [
-                { role: "user", parts: [{ text: userPrompt }] }
+        const completion = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
             ],
-            generationConfig: {
-                maxOutputTokens: maxTokens,
-                temperature: 0.8,
-            },
+            model: modelName,
+            temperature: 0.8,
+            max_tokens: maxTokens,
         });
 
-        const response = result.response;
-        const postText = response.text().trim();
+        const postText = completion.choices[0]?.message?.content?.trim() || "";
 
         if (postText.length > charLimit) {
             return postText.substring(0, charLimit - 3) + "...";
@@ -96,12 +92,12 @@ Study their patterns but maintain the user's authentic voice and the template's 
 
         return postText;
     } catch (error) {
-        throw new Error(`Failed to generate content with Gemini: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`Failed to generate content with Groq: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
-export async function analyzeVoiceWithGemini(pastPosts: string[]): Promise<object> {
-    const genAI = getClient();
+export async function analyzeVoiceWithGroq(pastPosts: string[]): Promise<object> {
+    const groq = getClient();
     if (pastPosts.length === 0) {
         throw new Error("At least one post is required for voice analysis");
     }
@@ -130,30 +126,26 @@ Extract and return ONLY a JSON object with these keys:
 
 Output ONLY valid JSON, nothing else.`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
     try {
-        const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: {
-                maxOutputTokens: 2000,
-                temperature: 0.3,
-            },
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.3,
+            max_tokens: 2000,
+            response_format: { type: "json_object" }
         });
 
-        const response = result.response;
-        const analysisText = response.text().trim();
-
+        const analysisText = completion.choices[0]?.message?.content?.trim() || "{}";
         return JSON.parse(analysisText);
     } catch (error) {
-        throw new Error(`Failed to analyze voice with Gemini: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`Failed to analyze voice with Groq: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 
-export async function analyzeEditsWithGemini(
+export async function analyzeEditsWithGroq(
     edits: Array<{ original: string; edited: string }>
 ): Promise<object> {
-    const genAI = getClient();
+    const groq = getClient();
     if (edits.length === 0) {
         throw new Error("At least one edit pair is required for pattern extraction");
     }
@@ -188,39 +180,18 @@ Return ONLY a JSON object with this key:
 
 Output ONLY valid JSON.`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
     try {
-        const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: {
-                maxOutputTokens: 2000,
-                temperature: 0.2,
-            },
+        const completion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.2,
+            max_tokens: 2000,
+            response_format: { type: "json_object" }
         });
 
-        const text = result.response.text().trim();
-        // Clean markdown if present
-        const jsonStr = text.startsWith("```json") ? text.replace(/```json|```/g, "").trim() : text;
-        return JSON.parse(jsonStr);
+        const text = completion.choices[0]?.message?.content?.trim() || "{}";
+        return JSON.parse(text);
     } catch (error) {
-        throw new Error(`Failed to extract patterns with Gemini: ${error instanceof Error ? error.message : String(error)}`);
-    }
-}
-
-/**
- * Generate a text embedding using Google's text-embedding-004 model.
- * Produces a 768-dimensional vector compatible with our pgvector index.
- * Used for semantic Knowledge Vault recall.
- */
-export async function generateEmbedding(text: string): Promise<number[]> {
-    const genAI = getClient();
-    const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
-
-    try {
-        const result = await model.embedContent(text);
-        return result.embedding.values;
-    } catch (error) {
-        throw new Error(`Failed to generate embedding: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`Failed to extract patterns with Groq: ${error instanceof Error ? error.message : String(error)}`);
     }
 }

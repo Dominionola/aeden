@@ -1,7 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import type { IntelligenceMetadata, IntelligenceVoiceAnalysis, IntelligenceBlock } from "@/types/database";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
+function getGroqClient() {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error("GROQ_API_KEY environment variable is required");
+    return new Groq({ apiKey });
+}
 
 export interface IntelligenceModule {
     metadata: IntelligenceMetadata;
@@ -84,23 +88,24 @@ Respond ONLY with valid JSON matching this schema:
 CRITICAL: Return ONLY the JSON object, no markdown formatting, no code blocks, no explanation.`;
 
 export async function refactorContent(content: string, sourceTitle: string): Promise<IntelligenceModule> {
-    const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.0-flash",
-        generationConfig: {
-            responseMimeType: "application/json",
-        },
-    });
+    const groq = getGroqClient();
 
-    const prompt = `${KNOWLEDGE_ARCHITECT_PROMPT}
-
-## SOURCE CONTENT
+    const prompt = `## SOURCE CONTENT
 Title: ${sourceTitle}
 
 ${content}`;
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+    const result = await groq.chat.completions.create({
+        messages: [
+            { role: "system", content: KNOWLEDGE_ARCHITECT_PROMPT },
+            { role: "user", content: prompt }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.2,
+        response_format: { type: "json_object" }
+    });
+
+    const text = result.choices[0]?.message?.content?.trim() || "{}";
 
     try {
         const parsed = JSON.parse(text);

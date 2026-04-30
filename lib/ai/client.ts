@@ -1,7 +1,8 @@
 import { generateWithGemini, analyzeVoiceWithGemini, analyzeEditsWithGemini, type GeminiGenerateOptions } from "./google";
 import { generateWithClaude, analyzeVoiceWithClaude, analyzeEditsWithClaude, type ClaudeGenerateOptions } from "./anthropic";
+import { generateWithGroq, analyzeVoiceWithGroq, analyzeEditsWithGroq, type GroqGenerateOptions } from "./groq";
 
-export type AiModel = "gemini" | "claude";
+export type AiModel = "gemini" | "claude" | "groq" | "groq-fast";
 export type AiArchetype = "observer" | "prophet" | "devastator";
 
 export interface GenerateOptions {
@@ -31,10 +32,17 @@ export interface GenerateOptions {
  * Falls back to Claude for complex persona matching.
  */
 export async function generate(options: GenerateOptions): Promise<string> {
-    const { model = "gemini", ...rest } = options;
+    const { model = "groq", ...rest } = options;
 
     if (model === "claude") {
         return generateWithClaude(rest as ClaudeGenerateOptions);
+    }
+
+    if (model === "groq" || model === "groq-fast") {
+        return generateWithGroq({
+            ...rest,
+            useFastModel: model === "groq-fast"
+        } as GroqGenerateOptions);
     }
 
     return generateWithGemini(rest as GeminiGenerateOptions);
@@ -46,10 +54,14 @@ export async function generate(options: GenerateOptions): Promise<string> {
  */
 export async function analyzeVoice(
     pastPosts: string[],
-    model: AiModel = "gemini"
+    model: AiModel = "groq"
 ): Promise<object> {
     if (model === "claude") {
         return analyzeVoiceWithClaude(pastPosts);
+    }
+    
+    if (model === "groq" || model === "groq-fast") {
+        return analyzeVoiceWithGroq(pastPosts);
     }
 
     return analyzeVoiceWithGemini(pastPosts);
@@ -60,11 +72,16 @@ export async function analyzeVoice(
  */
 export async function analyzeEdits(
     edits: Array<{ original: string; edited: string }>,
-    model: AiModel = "gemini"
+    model: AiModel = "groq"
 ): Promise<object> {
     if (model === "claude") {
         return analyzeEditsWithClaude(edits);
     }
+    
+    if (model === "groq" || model === "groq-fast") {
+        return analyzeEditsWithGroq(edits);
+    }
+    
     return analyzeEditsWithGemini(edits);
 }
 
@@ -97,6 +114,12 @@ export async function generateAIStrategy(options: {
 export function getModelVersion(model: AiModel): string {
     if (model === "claude") {
         return "claude-sonnet-4-20250514";
+    }
+    if (model === "groq") {
+        return "llama-3.3-70b-versatile";
+    }
+    if (model === "groq-fast") {
+        return "llama-3.1-8b-instant";
     }
     return "gemini-2.0-flash";
 }

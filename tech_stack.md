@@ -33,9 +33,9 @@
 - **Providers:** [Anthropic](https://www.anthropic.com) and [Google](https://ai.google.dev/)
 - **Models:**
   
-  - Gemini 2.0 Flash - Standard Fast Generation
-  - text-embedding-004 (Google AI) - Vector Embeddings for RAG
-- **SDKs:** `@anthropic-ai/sdk`, `@google/generative-ai`
+  - `gemini-1.5-flash-latest` - Standard Fast Generation
+  - `text-embedding-004` (Google AI) - Vector Embeddings for RAG
+- **SDKs:** `@anthropic-ai/sdk`, `@google/genai`
 - **Knowledge Vault:**
   - `@extractus/article-extractor` - Web content extraction from URLs
 
@@ -85,7 +85,7 @@ npm install @supabase/supabase-js @supabase/ssr
 
 ### AI SDK
 ```bash
-npm install @anthropic-ai/sdk
+npm install @google/genai @anthropic-ai/sdk
 ```
 
 ### Knowledge Vault (Web Scraping & File Processing)

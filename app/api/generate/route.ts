@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generate, type GenerateOptions, type AiModel } from "@/lib/ai/client";
 
-async function fetchKnowledgeContext(supabase: any, userId: string, input: string): Promise<string> {
+async function fetchKnowledgeContext(request: NextRequest, supabase: any, userId: string, input: string): Promise<string> {
     try {
         const recallRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/knowledge/recall`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Cookie": request.headers.get("cookie") || ""
+            },
             body: JSON.stringify({ input, limit: 5, activeOnly: true }),
         });
 
@@ -53,13 +56,13 @@ export async function POST(request: NextRequest) {
         // Fetch Knowledge Vault context if enabled
         let knowledgeContext = "";
         if (useKnowledgeVault) {
-            knowledgeContext = await fetchKnowledgeContext(supabase, user.id, input);
+            knowledgeContext = await fetchKnowledgeContext(request, supabase, user.id, input);
         }
 
         const options: GenerateOptions = {
             input,
             tone: (bodyTone || prefs?.tone || 'professional') as GenerateOptions['tone'],
-            model: (bodyModel || prefs?.preferred_ai_model || 'gemini-2.0-flash') as AiModel,
+            model: (bodyModel || prefs?.preferred_ai_model || 'groq') as AiModel,
             archetype,
             voiceAnalysis: prefs?.voice_analysis,
             aiContext: prefs?.ai_context,

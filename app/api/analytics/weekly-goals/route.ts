@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import fs from "fs";
 import path from "path";
 
-function getGeminiClient() {
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) throw new Error("GOOGLE_GENERATIVE_AI_API_KEY is required");
-    return new GoogleGenerativeAI(apiKey);
+function getGroqClient() {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error("GROQ_API_KEY is required");
+    return new Groq({ apiKey });
 }
 
 function getSystemPrompt() {
@@ -90,13 +91,8 @@ export async function POST(request: NextRequest) {
         const weekLabel = `${thisWeek.start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${thisWeek.end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 
         // Use AI to generate contextual goals
-        const genAI = getGeminiClient();
+        const groq = getGroqClient();
         const systemPrompt = getSystemPrompt();
-
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
-            systemInstruction: systemPrompt + `\n\nYou are now generating WEEKLY GOALS. Be concise. Follow the Aeden tone: direct, no fluff, no corporate speak. Do not use words like "leverage", "synergy", or "game-changing".`,
-        });
 
         const prompt = `
 Based on the user's performance data, generate realistic weekly improvement targets.
@@ -132,15 +128,18 @@ Return JSON only:
 }
 `;
 
-        const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.2,
-            },
+        const result = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt + `\n\nYou are now generating WEEKLY GOALS. Be concise. Follow the Aeden tone: direct, no fluff, no corporate speak. Do not use words like "leverage", "synergy", or "game-changing".` },
+                { role: "user", content: prompt }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.2,
+            response_format: { type: "json_object" }
         });
 
-        const parsed = JSON.parse(result.response.text());
+        const responseText = result.choices[0]?.message?.content?.trim() || "{}";
+        const parsed = JSON.parse(responseText);
 
         return NextResponse.json({
             weekLabel,

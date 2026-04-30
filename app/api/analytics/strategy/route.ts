@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import fs from "fs";
 import path from "path";
 
-// Initialize Gemini
-function getGeminiClient() {
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+// Initialize Groq
+function getGroqClient() {
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-        throw new Error("GOOGLE_GENERATIVE_AI_API_KEY environment variable is required");
+        throw new Error("GROQ_API_KEY environment variable is required");
     }
-    return new GoogleGenerativeAI(apiKey);
+    return new Groq({ apiKey });
 }
 
 // Load the AI Growth Strategy System Prompt
@@ -51,13 +52,8 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        const genAI = getGeminiClient();
+        const groq = getGroqClient();
         const systemPrompt = getSystemPrompt();
-
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash",
-            systemInstruction: systemPrompt,
-        });
 
         const promptText = `
 Analyze the following recent posts and their analytics data for this user.
@@ -80,15 +76,17 @@ ${JSON.stringify(recentPosts.map(p => ({
         })), null, 2)}
 `;
 
-        const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: promptText }] }],
-            generationConfig: {
-                responseMimeType: "application/json",
-                temperature: 0.2, // Low temp for more clinical, rule-following advice
-            }
+        const result = await groq.chat.completions.create({
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: promptText }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.2, // Low temp for more clinical, rule-following advice
+            response_format: { type: "json_object" }
         });
 
-        const responseText = result.response.text();
+        const responseText = result.choices[0]?.message?.content?.trim() || "{}";
         const parsedData = JSON.parse(responseText);
 
         return NextResponse.json(parsedData);

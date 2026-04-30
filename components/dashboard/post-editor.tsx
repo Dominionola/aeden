@@ -24,7 +24,7 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
     const [originalAiText, setOriginalAiText] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [tone, setTone] = useState("professional");
-    const [preferredAiModel, setPreferredAiModel] = useState("gemini-2.0-flash");
+    const [preferredAiModel, setPreferredAiModel] = useState("groq");
     const router = useRouter();
 
     const [isPublishing, setIsPublishing] = useState(false);
@@ -252,6 +252,8 @@ export function PostEditor({ initialContent = "", postId }: PostEditorProps) {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="groq">Groq (Llama 3 70B)</SelectItem>
+                                    <SelectItem value="groq-fast">Groq (Llama 3 8B)</SelectItem>
                                     <SelectItem value="gemini-2.0-flash">Gemini 2.0 Flash</SelectItem>
                                     <SelectItem value="claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
                                 </SelectContent>

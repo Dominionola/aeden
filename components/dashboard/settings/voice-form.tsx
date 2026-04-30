@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Sparkles, Save, Code, Palette, Briefcase, Video, Layers, TrendingUp, Landmark, Heart, Coffee, Loader2, RefreshCw, BrainCircuit, Type, FileText, ChevronDown, ChevronUp, Settings2, MessageSquare, Cpu } from "lucide-react";
+import { Sparkles, Save, Code, Palette, Briefcase, Video, Layers, TrendingUp, Landmark, Heart, Coffee, Loader2, RefreshCw, BrainCircuit, Type, FileText, ChevronDown, ChevronUp, Settings2, MessageSquare, Cpu, PenLine, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { KnowledgeVault } from "./knowledge/knowledge-vault";
 import {
@@ -56,7 +56,9 @@ const TONES = [
 ] as const;
 
 const AI_MODELS = [
-    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", description: "Fast, efficient" },
+    { id: "groq", label: "Groq (Llama 3 70B)", description: "High quality, versatile" },
+    { id: "groq-fast", label: "Groq (Llama 3 8B)", description: "Ultra-fast, efficient" },
+    { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash", description: "Fast, multimodal fallback" },
     { id: "claude-3.5-sonnet", label: "Claude 3.5 Sonnet", description: "Thoughtful, detailed" },
 ] as const;
 
@@ -96,7 +98,7 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
     const [autoLearn, setAutoLearn] = useState(initialPrefs.auto_learn_persona !== false);
     const [voiceAnalysis, setVoiceAnalysis] = useState(initialPrefs.voice_analysis || null);
     const [tone, setTone] = useState(initialPrefs.tone || "professional");
-    const [preferredAiModel, setPreferredAiModel] = useState(initialPrefs.preferred_ai_model || "gemini-2.0-flash");
+    const [preferredAiModel, setPreferredAiModel] = useState(initialPrefs.preferred_ai_model || "groq");
     
     // Playground State
     const [isSaved, setIsSaved] = useState(!!voiceAnalysis || (initialPrefs.categories && initialPrefs.categories.length > 0));
@@ -105,6 +107,10 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
     const [isGeneratingPlayground, setIsGeneratingPlayground] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isFormExpanded, setIsFormExpanded] = useState(!isSaved);
+
+    // Voice Extraction State
+    const [writingSamples, setWritingSamples] = useState<string[]>(["", ""]);
+    const [isExtractingVoice, setIsExtractingVoice] = useState(false);
 
     const handleToggleTopic = (topic: string) => {
         setTopics((prev) =>
@@ -206,6 +212,49 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
         }
     };
 
+    const handleExtractVoice = async () => {
+        const validSamples = writingSamples.filter(s => s.trim().length > 20);
+        if (validSamples.length < 2) {
+            toast.error("Add at least 2 posts", {
+                description: "Each post should have at least 20 characters."
+            });
+            return;
+        }
+        setIsExtractingVoice(true);
+        try {
+            const res = await fetch("/api/persona/voice-extract", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ posts: validSamples }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || data.error || "Extraction failed");
+            setVoiceAnalysis(data.analysis);
+            setWritingSamples(["", ""]);
+            toast.success("Voice extracted!", {
+                description: `Analyzed ${data.samplesAnalyzed} posts. Your AI persona has been updated.`
+            });
+            router.refresh();
+        } catch (err: any) {
+            toast.error("Extraction failed", { description: err.message });
+        } finally {
+            setIsExtractingVoice(false);
+        }
+    };
+
+    const addSampleSlot = () => {
+        if (writingSamples.length >= 8) return;
+        setWritingSamples(prev => [...prev, ""]);
+    };
+
+    const removeSampleSlot = (index: number) => {
+        setWritingSamples(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const updateSample = (index: number, value: string) => {
+        setWritingSamples(prev => prev.map((s, i) => i === index ? value : s));
+    };
+
     const [strategy, setStrategy] = useState<any>(null);
     useEffect(() => {
         if (isSaved) {
@@ -251,6 +300,68 @@ export default function VoiceForm({ initialPrefs }: VoiceFormProps) {
                     <p className="text-sm text-gray-500 mt-2">Saving preferences and updating AI context</p>
                 </div>
             )}
+
+            {/* Teach Aeden Your Voice — Writing Samples */}
+            <Card className="border-dashed border-primary-200 bg-gradient-to-br from-primary-50/40 to-transparent shadow-none">
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <PenLine className="h-4 w-4 text-primary-600" />
+                        Teach Aeden Your Voice
+                    </CardTitle>
+                    <CardDescription className="text-xs leading-relaxed">
+                        Paste 2–5 of your best posts from anywhere — Threads, Twitter, LinkedIn, Notion.
+                        Aeden will extract your exact writing style in under 10 seconds.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {writingSamples.map((sample, i) => (
+                        <div key={i} className="relative group">
+                            <Textarea
+                                placeholder={i === 0
+                                    ? "Paste your first post here..."
+                                    : i === 1
+                                    ? "Paste another post here..."
+                                    : `Post ${i + 1}...`
+                                }
+                                value={sample}
+                                onChange={(e) => updateSample(i, e.target.value)}
+                                className="min-h-[80px] text-sm resize-none pr-10 bg-white/70 border-gray-200 focus:border-primary-300 transition-colors"
+                            />
+                            {writingSamples.length > 2 && (
+                                <button
+                                    onClick={() => removeSampleSlot(i)}
+                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
+                                    aria-label="Remove sample"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+
+                    <div className="flex items-center justify-between pt-1">
+                        <button
+                            onClick={addSampleSlot}
+                            disabled={writingSamples.length >= 8}
+                            className="text-xs text-primary-600 hover:text-primary-700 flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <Plus className="h-3 w-3" /> Add another post
+                        </button>
+                        <Button
+                            onClick={handleExtractVoice}
+                            disabled={isExtractingVoice || writingSamples.filter(s => s.trim().length > 20).length < 2}
+                            size="sm"
+                            className="bg-primary-600 hover:bg-primary-700 text-white gap-2"
+                        >
+                            {isExtractingVoice ? (
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Extracting...</>
+                            ) : (
+                                <><Sparkles className="h-3.5 w-3.5" /> Extract My Voice</>
+                            )}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* AI Voice Analysis Section */}
             {voiceAnalysis && (

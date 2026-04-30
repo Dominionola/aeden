@@ -1,6 +1,61 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { analyzeEdits } from "@/lib/ai/client";
+
+/**
+ * Auto-triggers voice pattern extraction when the user accumulates
+ * enough edit pairs. Runs silently in the background — no user action needed.
+ */
+async function maybeRunAutoLearn(supabase: any, userId: string) {
+    try {
+        const { data: prefs } = await supabase
+            .from("user_preferences")
+            .select("auto_learn_persona")
+            .eq("user_id", userId)
+            .single();
+
+        if (!prefs?.auto_learn_persona) return;
+
+        // Count how many unprocessed edits exist
+        const { count } = await supabase
+            .from("post_edits")
+            .select("id", { count: "exact", head: true })
+            .eq("posts.user_id", userId)
+            .not("original_ai_text", "is", null);
+
+        // Only run analysis at every 3rd edit (3, 6, 9…)
+        if (!count || count % 3 !== 0) return;
+
+        const { data: edits } = await supabase
+            .from("post_edits")
+            .select(`original_ai_text, user_edited_text, posts!inner(user_id)`)
+            .eq("posts.user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(10);
+
+        if (!edits || edits.length < 3) return;
+
+        const editPairs = edits.map((e: any) => ({
+            original: e.original_ai_text,
+            edited: e.user_edited_text,
+        }));
+
+        const result = await analyzeEdits(editPairs, "groq") as any;
+        const voiceAnalysis = result?.voice_analysis ?? result;
+
+        if (voiceAnalysis?.tone && voiceAnalysis?.characteristics) {
+            await supabase
+                .from("user_preferences")
+                .update({ voice_analysis: voiceAnalysis, updated_at: new Date().toISOString() })
+                .eq("user_id", userId);
+            console.log(`[AutoLearn] Voice model updated for user ${userId} after ${count} edits.`);
+        }
+    } catch (err) {
+        // Silently fail — this is a background enrichment, never block the main request
+        console.warn("[AutoLearn] Background pattern extraction failed:", err);
+    }
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -51,6 +106,9 @@ export async function POST(request: NextRequest) {
             });
             if (editError) {
                 console.error("Failed to record post edit:", editError);
+            } else {
+                // Silently auto-learn in the background — don't await, never block the response
+                maybeRunAutoLearn(supabase, user.id);
             }
         }
         return NextResponse.json(data);
@@ -109,6 +167,9 @@ export async function PUT(request: NextRequest) {
             });
             if (editError) {
                 console.error("Failed to record post edit:", editError);
+            } else {
+                // Silently auto-learn in the background — don't await, never block the response
+                maybeRunAutoLearn(supabase, user.id);
             }
         }
         return NextResponse.json(data);

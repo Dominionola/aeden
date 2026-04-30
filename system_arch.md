@@ -303,7 +303,7 @@ The Knowledge Vault supports file uploads with AI-powered extraction:
 
 **Implementation**: `lib/ai/file-extractor.ts`
 - Uses Gemini's inline data handling for PDF/image processing
-- No additional dependencies (uses existing `@google/generative-ai` SDK)
+- No additional dependencies (uses existing `@google/genai` SDK)
 - Better quality than traditional PDF parsers (layout, tables, images preserved)
 
 ---
