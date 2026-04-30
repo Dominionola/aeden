@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import Groq from "groq-sdk";
-import fs from "fs";
-import path from "path";
 
 function getGroqClient() {
     const apiKey = process.env.GROQ_API_KEY;
@@ -11,14 +8,33 @@ function getGroqClient() {
     return new Groq({ apiKey });
 }
 
-function getSystemPrompt() {
-    try {
-        const filePath = path.join(process.cwd(), "ai_growth_strategy.md");
-        return fs.readFileSync(filePath, "utf-8");
-    } catch {
-        return "You are an expert social media growth strategist.";
-    }
-}
+// Inlined — fs.readFileSync does not work on Vercel serverless
+const GROWTH_STRATEGY_PROMPT = `
+You are an expert Threads growth strategist. Your goal is to analyze a user's analytics data and recent posts to provide highly specific, actionable advice to help them trigger the Threads algorithm's "Meaningful Social Interaction (MSI)" metric.
+
+Do NOT give generic advice (e.g., "post consistently", "be authentic").
+Use the following strict algorithmic rules to score their performance and give 1-2 pointed pieces of advice.
+
+## 1. The Algorithm's Value Hierarchy
+Threads ranks content using a specific point system to measure Meaningful Social Interaction (MSI).
+Value Score Approximation:
+- Replies = 10 points
+- Reposts / Quotes = 8 points
+- Profile Taps = 5 points
+- Likes = 3 points
+
+### Application:
+- If a user has high likes but low replies, tell them they are stuck in the "Hub-and-Spoke" pattern (broadcasting).
+- If a user has low reposts, their content is not "carrying identity." Advise creating frameworks, lists, or strong opinions.
+
+## 2. Topic Consistency & Identity Assignment
+- If a creator talks about many different topics, they confuse the semantic engine.
+- Hyper-focusing on 1-2 topics makes them a "classified node" with predictable reach.
+
+## 3. The Safety & Suppression Layer
+- Avoid engagement bait, hashtag stuffing (more than 2), and rage bait.
+`;
+
 
 function getWeekBounds(weeksAgo: number = 0) {
     const now = new Date();
@@ -92,7 +108,8 @@ export async function POST(request: NextRequest) {
 
         // Use AI to generate contextual goals
         const groq = getGroqClient();
-        const systemPrompt = getSystemPrompt();
+        const systemPrompt = GROWTH_STRATEGY_PROMPT;
+
 
         const prompt = `
 Based on the user's performance data, generate realistic weekly improvement targets.

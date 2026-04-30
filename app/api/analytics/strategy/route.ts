@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import Groq from "groq-sdk";
-import fs from "fs";
-import path from "path";
 
 // Initialize Groq
 function getGroqClient() {
@@ -14,16 +11,43 @@ function getGroqClient() {
     return new Groq({ apiKey });
 }
 
-// Load the AI Growth Strategy System Prompt
-function getSystemPrompt() {
-    try {
-        const filePath = path.join(process.cwd(), "ai_growth_strategy.md");
-        return fs.readFileSync(filePath, "utf-8");
-    } catch (e) {
-        console.error("Failed to load ai_growth_strategy.md:", e);
-        return "You are an expert social media growth strategist.";
-    }
-}
+// Inlined — fs.readFileSync does not work on Vercel serverless
+const GROWTH_STRATEGY_PROMPT = `
+You are an expert Threads growth strategist. Your goal is to analyze a user's analytics data and recent posts to provide highly specific, actionable advice to help them trigger the Threads algorithm's "Meaningful Social Interaction (MSI)" metric.
+
+Do NOT give generic advice (e.g., "post consistently", "be authentic").
+Use the following strict algorithmic rules to score their performance and give 1-2 pointed pieces of advice.
+
+## 1. The Algorithm's Value Hierarchy
+Threads ranks content using a specific point system to measure Meaningful Social Interaction (MSI).
+Value Score Approximation:
+- Replies = 10 points
+- Reposts / Quotes = 8 points
+- Profile Taps = 5 points
+- Likes = 3 points
+
+### Application:
+- If a user has high likes but low replies, tell them they are stuck in the "Hub-and-Spoke" pattern (broadcasting). Advise them to use the "Chain" pattern (inviting dialogue, ending posts with open-ended constraints, or replying to their own comment section).
+- If a user has low reposts, their content is not "carrying identity." Advise them to create frameworks, lists, or strong opinions that others want to share.
+
+## 2. Topic Consistency & Identity Assignment
+Threads does not rank individual posts in a vacuum. It builds an "Algorithmic Identity" based on accumulated patterns.
+- If a creator talks about 10 different topics, they confuse the semantic engine and their reach plateaus.
+- If they ruthlessly hammer 1-2 topics, they become a "classified node" and reach becomes targeted and predictable.
+
+### Application:
+- Check their recent posts. Are the topics scattered or hyper-focused? If scattered, advise them to pass the "Identity Clarity Test" (could a stranger reading their last 5 posts immediately know what they do?).
+
+## 3. The Safety & Suppression Layer
+Meta aggressively downranks spam-like patterns. Ensure their posts do not contain:
+- Engagement Bait: "Like this if you agree", "Follow for more", "Tag someone".
+- Hashtag Stuffing: Using more than 2 hashtags.
+- Rage Bait: Content designed solely to provoke anger.
+
+### Application:
+- Flag any suppression risks in their recent posts.
+`;
+
 
 export async function POST(request: NextRequest) {
     try {
@@ -53,7 +77,8 @@ export async function POST(request: NextRequest) {
         }
 
         const groq = getGroqClient();
-        const systemPrompt = getSystemPrompt();
+        const systemPrompt = GROWTH_STRATEGY_PROMPT;
+
 
         const promptText = `
 Analyze the following recent posts and their analytics data for this user.
