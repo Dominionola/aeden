@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     if (!entries) {
         let query = supabase
             .from("knowledge_vault")
-            .select("id, metadata, voice_analysis, intelligence_blocks, contrarian_takes, suggested_hashtags, times_used, last_used_at")
+            .select("id, source_title, metadata, voice_analysis, intelligence_blocks, contrarian_takes, suggested_hashtags, times_used, last_used_at")
             .eq("user_id", user.id);
 
         if (activeOnly) {

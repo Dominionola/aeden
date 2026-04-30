@@ -4,7 +4,7 @@ import { analyzeVoice } from "@/lib/ai/client";
 
 /**
  * POST /api/persona/voice-extract
- * Takes 3-5 raw writing samples (past posts from anywhere),
+ * Takes 2-10 raw writing samples (past posts from anywhere),
  * extracts a structured voice profile, and saves it to user_preferences.
  *
  * Body: { posts: string[] }
@@ -18,7 +18,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const body = await req.json();
+        let body;
+        try {
+            body = await req.json();
+        } catch {
+            return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+        }
         const { posts }: { posts: string[] } = body;
 
         if (!posts || !Array.isArray(posts)) {
@@ -53,32 +58,28 @@ export async function POST(req: NextRequest) {
         // The analyzeVoice function returns the full profile directly
         const voiceProfile = result.voice_analysis ?? result;
 
-        if (!voiceProfile.tone || !voiceProfile.characteristics) {
-            throw new Error("AI failed to extract a valid voice profile. Please try with different samples.");
-        }
-
-        // Persist to user_preferences
         const { error: updateError } = await supabase
             .from("user_preferences")
-            .update({
+            .upsert({
+                user_id: user.id,
                 voice_analysis: voiceProfile,
                 updated_at: new Date().toISOString(),
-            })
-            .eq("user_id", user.id);
+            }, { onConflict: 'user_id' });
 
         if (updateError) throw updateError;
 
-        return NextResponse.json({
-            message: "Voice profile extracted and saved!",
-            analysis: voiceProfile,
-            samplesAnalyzed: cleanedPosts.length,
-        });
 
-    } catch (error: any) {
-        console.error("Voice extraction error:", error);
-        return NextResponse.json({
-            error: "Extraction failed",
-            message: error.message,
-        }, { status: 500 });
-    }
+    return NextResponse.json({
+        message: "Voice profile extracted and saved!",
+        analysis: voiceProfile,
+        samplesAnalyzed: cleanedPosts.length,
+    });
+
+} catch (error: any) {
+    console.error("Voice extraction error:", error);
+    return NextResponse.json({
+        error: "Extraction failed",
+        message: error.message,
+    }, { status: 500 });
+}
 }

@@ -3,7 +3,7 @@
 -- Enables true similarity-based RAG recall instead of keyword matching.
 
 -- Enable pgvector extension (no-op if already enabled)
-CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
 
 -- Add embedding column to knowledge_vault
 ALTER TABLE knowledge_vault

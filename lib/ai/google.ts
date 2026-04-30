@@ -214,11 +214,16 @@ Output ONLY valid JSON.`;
  * Used for semantic Knowledge Vault recall.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
+    const trimmedText = text.trim();
+    if (!trimmedText) {
+        throw new Error("Text cannot be empty for embedding generation");
+    }
+
     const genAI = getClient();
     const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
 
     try {
-        const result = await model.embedContent(text);
+        const result = await model.embedContent(trimmedText);
         return result.embedding.values;
     } catch (error) {
         throw new Error(`Failed to generate embedding: ${error instanceof Error ? error.message : String(error)}`);

@@ -139,8 +139,13 @@ Return JSON only:
         });
 
         const responseText = result.choices[0]?.message?.content?.trim() || "{}";
-        const parsed = JSON.parse(responseText);
-
+        let parsed;
+        try {
+            parsed = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error("Failed to parse AI response:", responseText);
+            return NextResponse.json({ error: "Invalid AI response format" }, { status: 500 });
+        }
         return NextResponse.json({
             weekLabel,
             ...parsed,
